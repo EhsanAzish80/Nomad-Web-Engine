@@ -5,7 +5,6 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::ptr;
-use std::slice;
 
 use nomad_core::Engine;
 

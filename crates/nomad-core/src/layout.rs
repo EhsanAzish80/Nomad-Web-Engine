@@ -6,6 +6,7 @@ use crate::display_list::{DisplayItem, DisplayItemKind, DisplayList, Rect};
 use markup5ever_rcdom::{Handle, NodeData};
 
 /// Configuration for layout.
+#[derive(Clone)]
 pub struct LayoutConfig {
     /// Viewport width
     pub viewport_width: f32,
