@@ -216,7 +216,7 @@ impl LayoutEngine {
     fn computed_style_to_taffy(&self, style: &ComputedStyle) -> Style {
         let display = match style.display {
             Display::Block => taffy::style::Display::Block,
-            Display::Inline => taffy::style::Display::Block, // Treat inline as block for now
+            Display::Inline | Display::InlineBlock => taffy::style::Display::Flex, // Use flex row for inline flow
             Display::Flex => taffy::style::Display::Flex,
             Display::None => taffy::style::Display::None,
         };

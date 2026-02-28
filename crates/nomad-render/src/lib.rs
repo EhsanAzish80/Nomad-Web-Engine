@@ -23,6 +23,8 @@ pub struct DisplayList {
     pub height: f32,
     /// List of items to draw
     pub items: Vec<DisplayItem>,
+    /// Interactive hit regions for user input
+    pub hit_regions: Vec<HitRegion>,
 }
 
 impl DisplayList {
@@ -32,6 +34,7 @@ impl DisplayList {
             width,
             height: 0.0,
             items: Vec::new(),
+            hit_regions: Vec::new(),
         }
     }
 
@@ -45,6 +48,16 @@ impl DisplayList {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, RenderError> {
         serde_json::from_slice(bytes)
             .map_err(|e| RenderError::Serialization(format!("Failed to deserialize: {}", e)))
+    }
+
+    /// Performs hit testing at the given point, returning the first matching hit region.
+    /// 
+    /// # Arguments
+    /// * `x` - X coordinate in content space
+    /// * `y` - Y coordinate in content space (including scroll offset)
+    pub fn hit_test(&self, x: f32, y: f32) -> Option<&HitRegion> {
+        // Iterate in reverse order so top elements are tested first
+        self.hit_regions.iter().rev().find(|region| region.rect.contains(x, y))
     }
 }
 
@@ -77,6 +90,11 @@ pub enum DisplayItemKind {
     Box {
         /// Background color (future)
         color: Option<String>,
+    },
+    /// Clickable link area (for anchor elements)
+    Link {
+        /// URL to navigate to
+        url: String,
     },
     /// Text input field
     Input {
@@ -124,23 +142,60 @@ impl Rect {
     }
 }
 
+/// Type of interactive region.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HitRegionKind {
+    /// Clickable link
+    Link { url: String },
+    /// Button (submit or regular)
+    Button { 
+        button_type: String,
+        form_id: Option<String>,
+    },
+    /// Input field
+    Input {
+        control_id: String,
+        name: String,
+        input_type: String,
+    },
+}
+
+/// An interactive region that can receive user input.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HitRegion {
+    /// Unique stable ID for this region
+    pub id: String,
+    /// Type and payload
+    pub kind: HitRegionKind,
+    /// Bounding rectangle
+    pub rect: Rect,
+}
+
 /// Render engine that converts layout boxes to display list.
 pub struct RenderEngine {
     viewport_width: f32,
+    next_hit_region_id: usize,
 }
 
 impl RenderEngine {
     /// Creates a new render engine.
     pub fn new(viewport_width: f32) -> Self {
-        Self { viewport_width }
+        Self { 
+            viewport_width,
+            next_hit_region_id: 0,
+        }
     }
 
     /// Convert a layout box tree into a display list.
     pub fn render(&self, layout_root: &LayoutBox) -> Result<DisplayList, RenderError> {
         let mut display_list = DisplayList::new(self.viewport_width);
+        let mut engine = Self {
+            viewport_width: self.viewport_width,
+            next_hit_region_id: 0,
+        };
 
         // Recursively add display items
-        self.add_layout_box(&mut display_list, layout_root, 0.0, 0.0);
+        engine.add_layout_box(&mut display_list, layout_root, 0.0, 0.0);
 
         // Update total height
         if let Some(max_item) = display_list.items.iter().max_by(|a, b| {
@@ -156,7 +211,7 @@ impl RenderEngine {
 
     /// Recursively add display items from layout boxes.
     fn add_layout_box(
-        &self,
+        &mut self,
         display_list: &mut DisplayList,
         layout_box: &LayoutBox,
         offset_x: f32,
@@ -192,6 +247,10 @@ impl RenderEngine {
                 value,
                 input_type,
             } => {
+                // Generate stable control ID
+                let control_id = format!("input_{}", self.next_hit_region_id);
+                self.next_hit_region_id += 1;
+                
                 display_list.items.push(DisplayItem {
                     kind: DisplayItemKind::Input {
                         name: name.clone(),
@@ -200,12 +259,27 @@ impl RenderEngine {
                     },
                     bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
                 });
+                
+                // Add hit region for input
+                display_list.hit_regions.push(HitRegion {
+                    id: control_id.clone(),
+                    kind: HitRegionKind::Input {
+                        control_id,
+                        name: name.clone(),
+                        input_type: input_type.clone(),
+                    },
+                    rect: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                });
             }
             LayoutContent::Button {
                 label,
                 button_type,
                 form_id,
             } => {
+                // Generate stable region ID
+                let region_id = format!("button_{}", self.next_hit_region_id);
+                self.next_hit_region_id += 1;
+                
                 display_list.items.push(DisplayItem {
                     kind: DisplayItemKind::Button {
                         label: label.clone(),
@@ -214,10 +288,46 @@ impl RenderEngine {
                     },
                     bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
                 });
+                
+                // Add hit region for button
+                display_list.hit_regions.push(HitRegion {
+                    id: region_id,
+                    kind: HitRegionKind::Button {
+                        button_type: button_type.clone(),
+                        form_id: form_id.clone(),
+                    },
+                    rect: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                });
             }
-            LayoutContent::Element { .. } | LayoutContent::Anonymous => {
-                // For elements, we might add a box later for backgrounds/borders
-                // For now, just process children
+            LayoutContent::Element { is_link, link_url, .. } => {
+                // For link elements, create a clickable area
+                if *is_link {
+                    if let Some(url) = link_url {
+                        // Generate stable region ID
+                        let region_id = format!("link_{}", self.next_hit_region_id);
+                        self.next_hit_region_id += 1;
+                        
+                        display_list.items.push(DisplayItem {
+                            kind: DisplayItemKind::Link {
+                                url: url.clone(),
+                            },
+                            bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                        });
+                        
+                        // Add hit region for link
+                        display_list.hit_regions.push(HitRegion {
+                            id: region_id,
+                            kind: HitRegionKind::Link {
+                                url: url.clone(),
+                            },
+                            rect: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                        });
+                    }
+                }
+                // For other elements, just process children
+            }
+            LayoutContent::Anonymous => {
+                // For anonymous containers, just process children
             }
         }
 

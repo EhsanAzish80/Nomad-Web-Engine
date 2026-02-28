@@ -26,6 +26,9 @@ pub enum NetworkError {
 
     #[error("Timeout after {0} seconds")]
     Timeout(u64),
+
+    #[error("Too many redirects")]
+    MaxRedirects,
 }
 
 /// Response from a network fetch.
@@ -103,6 +106,67 @@ impl NetworkLayer {
         let response = self
             .client
             .get(url)
+            .send()
+            .map_err(|e| {
+                if e.is_timeout() {
+                    NetworkError::Timeout(self.timeout.as_secs())
+                } else {
+                    NetworkError::RequestFailed(e.to_string())
+                }
+            })?;
+
+        let status = response.status().as_u16();
+        let final_url = response.url().to_string();
+
+        // Check content length if available
+        if let Some(content_length) = response.content_length() {
+            if content_length as usize > self.max_size {
+                return Err(NetworkError::ResponseTooLarge);
+            }
+        }
+
+        // Read body with size limit
+        let body = response
+            .text()
+            .map_err(|e| NetworkError::RequestFailed(e.to_string()))?;
+
+        if body.len() > self.max_size {
+            return Err(NetworkError::ResponseTooLarge);
+        }
+
+        Ok(FetchResponse {
+            url: final_url,
+            body,
+            status,
+        })
+    }
+
+    /// Sends a POST request to a URL with form data.
+    ///
+    /// Returns a `FetchResponse` on success, or a `NetworkError` if:
+    /// - The URL is invalid
+    /// - The request times out
+    /// - The response is too large
+    /// - The request fails for any other reason
+    pub fn post(&self, url: &str, form_data: &str) -> Result<FetchResponse, NetworkError> {
+        // Validate URL
+        let parsed_url =
+            reqwest::Url::parse(url).map_err(|e| NetworkError::InvalidUrl(e.to_string()))?;
+
+        // Only allow HTTP and HTTPS
+        if parsed_url.scheme() != "http" && parsed_url.scheme() != "https" {
+            return Err(NetworkError::InvalidUrl(format!(
+                "Unsupported scheme: {}",
+                parsed_url.scheme()
+            )));
+        }
+
+        // Send POST request with form data
+        let response = self
+            .client
+            .post(url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(form_data.to_string())
             .send()
             .map_err(|e| {
                 if e.is_timeout() {

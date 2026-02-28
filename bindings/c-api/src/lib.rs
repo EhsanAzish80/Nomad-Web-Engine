@@ -89,6 +89,37 @@ pub unsafe extern "C" fn nomad_engine_load_url(
     }
 }
 
+/// Navigates to a URL, resolving it relative to the current page if needed.
+///
+/// This function should be used for link clicks instead of `nomad_engine_load_url`,
+/// as it properly handles relative URLs like "/path" or "page.html".
+///
+/// Returns 0 on success, non-zero on failure.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+/// The url pointer must be a valid null-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_navigate(
+    engine: *mut NomadEngine,
+    url: *const c_char,
+) -> i32 {
+    if engine.is_null() || url.is_null() {
+        return -1;
+    }
+
+    let url_str = match CStr::from_ptr(url).to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+
+    match (*engine).engine.navigate(url_str) {
+        Ok(_) => 0,
+        Err(_) => -3,
+    }
+}
+
 /// Ticks the engine (for future animations/updates).
 ///
 /// # Safety
@@ -181,6 +212,80 @@ pub unsafe extern "C" fn nomad_engine_submit_form(
     match (*engine).engine.submit_form(form_index, &inputs) {
         Ok(_) => 0,
         Err(_) => -4,
+    }
+}
+
+/// Goes back in navigation history.
+/// Returns 0 on success, non-zero on failure.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_go_back(engine: *mut NomadEngine) -> i32 {
+    if engine.is_null() {
+        return -1;
+    }
+
+    match (*engine).engine.go_back() {
+        Ok(_) => 0,
+        Err(_) => -2,
+    }
+}
+
+/// Goes forward in navigation history.
+/// Returns 0 on success, non-zero on failure.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_go_forward(engine: *mut NomadEngine) -> i32 {
+    if engine.is_null() {
+        return -1;
+    }
+
+    match (*engine).engine.go_forward() {
+        Ok(_) => 0,
+        Err(_) => -2,
+    }
+}
+
+/// Checks if the engine can go back in history.
+/// Returns 1 if can go back, 0 if cannot.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_can_go_back(engine: *const NomadEngine) -> i32 {
+    if engine.is_null() {
+        return 0;
+    }
+
+    if (*engine).engine.can_go_back() {
+        1
+    } else {
+        0
+    }
+}
+
+/// Checks if the engine can go forward in history.
+/// Returns 1 if can go forward, 0 if cannot.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_can_go_forward(engine: *const NomadEngine) -> i32 {
+    if engine.is_null() {
+        return 0;
+    }
+
+    if (*engine).engine.can_go_forward() {
+        1
+    } else {
+        0
     }
 }
 

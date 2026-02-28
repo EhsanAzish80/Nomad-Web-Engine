@@ -51,6 +51,16 @@ struct RenderView: View {
                     .position(x: CGFloat(item.bounds.x + item.bounds.width / 2),
                              y: CGFloat(item.bounds.y + item.bounds.height / 2))
                     
+                case .link(let linkItem):
+                    Button("") {
+                        onLinkClick(linkItem.url)
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: CGFloat(item.bounds.width), height: CGFloat(item.bounds.height))
+                    .position(x: CGFloat(item.bounds.x + item.bounds.width / 2),
+                             y: CGFloat(item.bounds.y + item.bounds.height / 2))
+                    .opacity(0.0) // Invisible button for click handling
+                    
                 case .text(let textItem):
                     if textItem.isLink, let url = textItem.linkUrl {
                         Button("") {

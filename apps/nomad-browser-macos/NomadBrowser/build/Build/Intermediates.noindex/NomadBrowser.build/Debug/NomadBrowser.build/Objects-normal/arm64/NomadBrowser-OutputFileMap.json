@@ -1,0 +1,69 @@
+{
+  "" : {
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.dia",
+    "emit-module-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-emit-module.dia",
+    "pch" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.swiftdeps"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/ContentView.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/DisplayList.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/DisplayList~partial.swiftmodule"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/NomadBrowserApp.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp~partial.swiftmodule"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/NomadEngine.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/NomadEngine~partial.swiftmodule"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/RenderView.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/RenderView~partial.swiftmodule"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Debug/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

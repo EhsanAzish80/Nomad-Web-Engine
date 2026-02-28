@@ -17,6 +17,68 @@ pub const MAX_CSS_FILE_SIZE: usize = 1_048_576; // 1MB
 pub const MAX_CSS_FILES: usize = 10;
 pub const MAX_SELECTOR_DEPTH: usize = 10;
 
+/// User-agent stylesheet with sensible defaults for Phase 6 usability.
+const USER_AGENT_CSS: &str = r#"
+/* Block-level elements */
+html, body, div, article, section, nav, aside, header, footer, main {
+    display: block;
+}
+
+/* Inline elements */
+span, a, em, strong, code, b, i, u {
+    display: inline;
+}
+
+/* Form elements with intrinsic sizing */
+input {
+    display: inline-block;
+    width: 200px;
+    height: 24px;
+    padding: 4px;
+    margin: 2px;
+}
+
+button {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 2px;
+    min-width: 60px;
+    height: 32px;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    display: block;
+    margin: 8px 0;
+}
+
+/* Lists */
+ul, ol {
+    display: block;
+    margin: 8px 0;
+}
+
+li {
+    display: block;
+}
+
+/* Paragraphs */
+p {
+    display: block;
+    margin: 8px 0;
+}
+
+/* Images should be inline-block */
+img {
+    display: inline-block;
+}
+
+/* Forms */
+form {
+    display: block;
+}
+"#;
+
 /// Errors that can occur during style processing.
 #[derive(Error, Debug)]
 pub enum StyleError {
@@ -30,6 +92,7 @@ pub enum Display {
     #[default]
     Block,
     Inline,
+    InlineBlock,
     Flex,
     None,
 }
@@ -230,6 +293,16 @@ impl StyleSheet {
         }
 
         stylesheet
+    }
+
+    /// Parse CSS with user-agent stylesheet prepended.
+    /// User-agent rules come first, then author CSS, following CSS cascade order.
+    /// Silently ignores unsupported rules and properties.
+    /// Enforces MAX_CSS_RULES limit for security.
+    pub fn parse_with_user_agent(css: &str) -> Self {
+        // Combine user-agent stylesheet with author CSS
+        let combined = format!("{}\n{}", USER_AGENT_CSS, css);
+        Self::parse(&combined)
     }
 
     /// Apply styles to a DOM node and compute final styles.
@@ -494,6 +567,7 @@ fn parse_property_value<'i, 't>(parser: &mut Parser<'i, 't>, property: &str) -> 
             let display = match ident.as_str() {
                 "block" => Display::Block,
                 "inline" => Display::Inline,
+                "inline-block" => Display::InlineBlock,
                 "flex" => Display::Flex,
                 "none" => Display::None,
                 _ => return Err(parser.new_custom_error(())),

@@ -1,0 +1,32 @@
+{
+  "source": "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Enter a URL to browse",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Enter URL",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 19
+        }
+      },
+      {
+        "comment": "",
+        "key": "Go",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 25
+        }
+      }
+    ]
+  },
+  "version": 1
+}

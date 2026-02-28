@@ -1,0 +1,24 @@
+{
+  "source": "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/RenderView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 66
+        }
+      }
+    ]
+  },
+  "version": 1
+}

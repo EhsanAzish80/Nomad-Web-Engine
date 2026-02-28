@@ -1,0 +1,12 @@
+{
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/ContentView.swift" : {
+    "abi-baseline-json" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser.abi.json",
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.dia",
+    "objc-header" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-Swift.h",
+    "swiftdoc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser.swiftdoc",
+    "swiftmodule" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser.swiftmodule",
+    "swiftsourceinfo" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser.swiftsourceinfo"
+  }
+}

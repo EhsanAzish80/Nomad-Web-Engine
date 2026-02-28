@@ -79,6 +79,7 @@ impl Default for HtmlParser {
 }
 
 /// DOM tree representation.
+#[derive(Debug, Clone)]
 pub struct DomTree {
     document: Handle,
     node_count: usize,

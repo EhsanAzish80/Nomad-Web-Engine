@@ -76,6 +76,136 @@ impl Default for EngineConfig {
     }
 }
 
+/// Navigation history entry
+#[derive(Debug, Clone)]
+struct HistoryEntry {
+    url: String,
+    /// DOM snapshot for back/forward cache
+    dom: Option<DomTree>,
+    /// Stylesheet snapshot
+    stylesheet: StyleSheet,
+    /// Forms snapshot
+    forms: Vec<FormMetadata>,
+}
+
+/// Navigation controller that manages URL history and navigation state
+struct NavigationController {
+    /// History stack for back/forward navigation
+    history: Vec<HistoryEntry>,
+    /// Current position in history (0-indexed)
+    current_index: usize,
+    /// Maximum history entries to keep
+    max_history: usize,
+    /// Maximum number of redirects to follow
+    max_redirects: usize,
+}
+
+impl NavigationController {
+    fn new() -> Self {
+        Self {
+            history: Vec::new(),
+            current_index: 0,
+            max_history: 50,
+            max_redirects: 10,
+        }
+    }
+
+    /// Returns the current URL, if any
+    fn current_url(&self) -> Option<&String> {
+        self.history.get(self.current_index).map(|e| &e.url)
+    }
+
+    /// Returns the base URL for resolving relative URLs
+    fn base_url(&self) -> Option<&String> {
+        self.current_url()
+    }
+
+    /// Adds a new entry to history and moves forward
+    fn push(&mut self, url: String, dom: Option<DomTree>, stylesheet: StyleSheet, forms: Vec<FormMetadata>) {
+        // Remove any forward history if we're not at the end
+        if self.current_index < self.history.len().saturating_sub(1) {
+            self.history.truncate(self.current_index + 1);
+        }
+
+        // Add new entry
+        self.history.push(HistoryEntry {
+            url,
+            dom,
+            stylesheet,
+            forms,
+        });
+
+        // Limit history size
+        if self.history.len() > self.max_history {
+            self.history.remove(0);
+        } else {
+            self.current_index = self.history.len().saturating_sub(1);
+        }
+    }
+
+    /// Checks if we can go back
+    fn can_go_back(&self) -> bool {
+        self.current_index > 0
+    }
+
+    /// Checks if we can go forward
+    fn can_go_forward(&self) -> bool {
+        self.current_index < self.history.len().saturating_sub(1)
+    }
+
+    /// Goes back in history, returns the previous entry
+    fn go_back(&mut self) -> Option<&HistoryEntry> {
+        if self.can_go_back() {
+            self.current_index -= 1;
+            self.history.get(self.current_index)
+        } else {
+            None
+        }
+    }
+
+    /// Goes forward in history, returns the next entry
+    fn go_forward(&mut self) -> Option<&HistoryEntry> {
+        if self.can_go_forward() {
+            self.current_index += 1;
+            self.history.get(self.current_index)
+        } else {
+            None
+        }
+    }
+}
+
+/// Security policy enforcer for browser safety
+struct SecurityPolicy {
+    /// No cookies are stored or sent
+    allows_cookies: bool,
+    /// No localStorage/sessionStorage
+    allows_local_storage: bool,
+    /// Only same-origin requests for resources (already enforced for CSS)
+    allows_third_party_requests: bool,
+    /// Maximum redirects to follow
+    max_redirects: usize,
+}
+
+impl SecurityPolicy {
+    fn default() -> Self {
+        Self {
+            allows_cookies: false,
+            allows_local_storage: false,
+            allows_third_party_requests: false,
+            max_redirects: 5,
+        }
+    }
+
+    /// Validates that we haven't exceeded redirect limits
+    fn check_redirect_limit(&self, count: usize) -> Result<(), EngineError> {
+        if count >= self.max_redirects {
+            Err(EngineError::Network(NetworkError::MaxRedirects))
+        } else {
+            Ok(())
+        }
+    }
+}
+
 /// The main engine struct that orchestrates the web engine components.
 pub struct Engine {
     network: NetworkLayer,
@@ -85,7 +215,8 @@ pub struct Engine {
     current_stylesheet: StyleSheet,
     current_display_list: Option<DisplayList>,
     current_forms: Vec<FormMetadata>,
-    current_url: Option<String>,
+    navigation: NavigationController,
+    security_policy: SecurityPolicy,
 }
 
 impl Engine {
@@ -107,7 +238,8 @@ impl Engine {
             current_stylesheet: StyleSheet::new(),
             current_display_list: None,
             current_forms: Vec::new(),
-            current_url: None,
+            navigation: NavigationController::new(),
+            security_policy: SecurityPolicy::default(),
         })
     }
 
@@ -190,22 +322,83 @@ impl Engine {
         let mut combined_css = external_css;
         combined_css.push_str(&inline_css);
         
-        // Parse stylesheet with automatic rule limiting
-        self.current_stylesheet = StyleSheet::parse(&combined_css);
+        // Parse stylesheet with user-agent defaults and automatic rule limiting
+        self.current_stylesheet = StyleSheet::parse_with_user_agent(&combined_css);
 
         // Extract form metadata
         self.current_forms = extract_forms_from_dom(dom.document(), url);
 
-        // Store current URL for relative URL resolution
-        self.current_url = Some(url.to_string());
-
         // Store the DOM
-        self.current_dom = Some(dom);
+        self.current_dom = Some(dom.clone());
+
+        // Push to navigation history
+        self.navigation.push(
+            url.to_string(),
+            Some(dom),
+            self.current_stylesheet.clone(),
+            self.current_forms.clone()
+        );
 
         // Generate display list
         self.regenerate_display_list()?;
 
         Ok(text)
+    }
+
+    /// Navigates to a URL, resolving it against the current page URL if it's relative.
+    ///
+    /// This is the recommended method for handling link clicks, as it properly
+    /// resolves relative URLs (like "/path" or "page.html") against the current page.
+    pub fn navigate(&mut self, url: &str) -> Result<String, EngineError> {
+        let resolved_url = if let Some(base) = self.navigation.base_url() {
+            resolve_url(base, url)
+        } else {
+            url.to_string()
+        };
+        
+        self.load_url(&resolved_url)
+    }
+
+    /// Goes back in navigation history and restores the previous page state.
+    pub fn go_back(&mut self) -> Result<(), EngineError> {
+        if let Some(entry) = self.navigation.go_back() {
+            // Restore the state from history
+            self.current_dom = entry.dom.clone();
+            self.current_stylesheet = entry.stylesheet.clone();
+            self.current_forms = entry.forms.clone();
+            
+            // Regenerate display list
+            self.regenerate_display_list()?;
+            Ok(())
+        } else {
+            Err(EngineError::NoContent)
+        }
+    }
+
+    /// Goes forward in navigation history and restores the next page state.
+    pub fn go_forward(&mut self) -> Result<(), EngineError> {
+        if let Some(entry) = self.navigation.go_forward() {
+            // Restore the state from history
+            self.current_dom = entry.dom.clone();
+            self.current_stylesheet = entry.stylesheet.clone();
+            self.current_forms = entry.forms.clone();
+            
+            // Regenerate display list
+            self.regenerate_display_list()?;
+            Ok(())
+        } else {
+            Err(EngineError::NoContent)
+        }
+    }
+
+    /// Checks if the engine can go back in history.
+    pub fn can_go_back(&self) -> bool {
+        self.navigation.can_go_back()
+    }
+
+    /// Checks if the engine can go forward in history.
+    pub fn can_go_forward(&self) -> bool {
+        self.navigation.can_go_forward()
     }
 
     /// Regenerates the display list from the current DOM and styles.
@@ -295,7 +488,6 @@ impl Engine {
     ///
     /// Returns an error if:
     /// - Form index is out of bounds
-    /// - Form method is not GET
     /// - Navigation fails
     pub fn submit_form(&mut self, form_index: usize, inputs: &[(String, String)]) -> Result<String, EngineError> {
         // Get the form metadata
@@ -303,25 +495,73 @@ impl Engine {
             .ok_or(EngineError::NoContent)?
             .clone();
 
-        // Only support GET forms
-        if form.method != "GET" {
-            return Err(EngineError::Serialization(
-                format!("Only GET forms are supported, got method: {}", form.method)
-            ));
+        // Build query/form data string
+        let data_string = build_query_string(inputs);
+
+        // Handle GET vs POST
+        match form.method.to_uppercase().as_str() {
+            "POST" => {
+                // For POST, send data in request body
+                let response = self.network.post(&form.action, &data_string)?;
+                
+                // Parse the response HTML
+                let dom = self.html_parser.parse(&response.body)?;
+                let text = dom.extract_text();
+                
+                // Extract inline CSS
+                let inline_css = extract_css_from_dom(dom.document());
+                let css_urls = extract_external_css_urls(dom.document(), &response.url);
+                
+                // Fetch external CSS files
+                let mut external_css = String::new();
+                for css_url in css_urls {
+                    let absolute_url = resolve_url(&response.url, &css_url);
+                    
+                    match self.network.fetch(&absolute_url) {
+                        Ok(css_response) => {
+                            if css_response.body.len() <= nomad_style::MAX_CSS_FILE_SIZE {
+                                external_css.push_str(&css_response.body);
+                                external_css.push('\n');
+                            }
+                        }
+                        Err(_) => {} // Ignore CSS fetch errors
+                    }
+                }
+                
+                // Merge and parse CSS
+                let mut combined_css = external_css;
+                combined_css.push_str(&inline_css);
+                self.current_stylesheet = StyleSheet::parse_with_user_agent(&combined_css);
+                
+                // Extract forms and store DOM
+                self.current_forms = extract_forms_from_dom(dom.document(), &response.url);
+                self.current_dom = Some(dom.clone());
+                
+                // Push to navigation history
+                self.navigation.push(
+                    response.url.clone(),
+                    Some(dom),
+                    self.current_stylesheet.clone(),
+                    self.current_forms.clone()
+                );
+                
+                // Regenerate display list
+                self.regenerate_display_list()?;
+                
+                Ok(text)
+            }
+            "GET" | _ => {
+                // For GET (and default), append data to URL
+                let url = if form.action.contains('?') {
+                    format!("{}&{}", form.action, data_string)
+                } else {
+                    format!("{}?{}", form.action, data_string)
+                };
+                
+                // Load the URL (this handles all the parsing and CSS loading)
+                self.load_url(&url)
+            }
         }
-
-        // Build query string
-        let query_string = build_query_string(inputs);
-
-        // Build final URL
-        let url = if form.action.contains('?') {
-            format!("{}&{}", form.action, query_string)
-        } else {
-            format!("{}?{}", form.action, query_string)
-        };
-
-        // Load the URL
-        self.load_url(&url)
     }
 
     /// Returns the engine configuration.
@@ -453,6 +693,28 @@ fn is_same_origin(href: &str, base_origin: &str) -> bool {
     // Absolute URLs must match origin
     let href_origin = get_origin(href);
     href_origin == base_origin
+}
+
+/// Resolve a relative URL against a base URL.
+fn resolve_url(base_url: &str, relative_url: &str) -> String {
+    // If already absolute, return as-is
+    if relative_url.starts_with("http://") || relative_url.starts_with("https://") {
+        return relative_url.to_string();
+    }
+    
+    // Absolute path relative to origin
+    if relative_url.starts_with('/') {
+        let origin = get_origin(base_url);
+        return format!("{}{}", origin, relative_url);
+    }
+    
+    // Relative path
+    if let Some(last_slash) = base_url.rfind('/') {
+        let base = &base_url[..last_slash + 1];
+        format!("{}{}", base, relative_url)
+    } else {
+        relative_url.to_string()
+    }
 }
 
 /// Extract form metadata from the DOM.

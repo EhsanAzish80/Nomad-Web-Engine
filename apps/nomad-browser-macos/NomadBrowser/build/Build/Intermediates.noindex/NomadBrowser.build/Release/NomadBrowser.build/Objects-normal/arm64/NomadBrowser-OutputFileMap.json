@@ -1,0 +1,41 @@
+{
+  "" : {
+    "const-values" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.swiftconstvalues",
+    "dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.d",
+    "diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.dia",
+    "emit-module-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-emit-module.dia",
+    "pch" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowser-primary.swiftdeps"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/ContentView.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/ContentView.o"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/DisplayList.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/DisplayList.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/DisplayList.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/DisplayList.o"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/NomadBrowserApp.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadBrowserApp.o"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/NomadEngine.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadEngine.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadEngine.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/NomadEngine.o"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/NomadBrowser/RenderView.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/RenderView.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/RenderView.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/RenderView.o"
+  },
+  "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "index-unit-output-path" : "/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/ehsanazish/Documents/Projects/Nomad-Web-Engine/apps/nomad-browser-macos/NomadBrowser/build/Build/Intermediates.noindex/NomadBrowser.build/Release/NomadBrowser.build/Objects-normal/arm64/GeneratedAssetSymbols.o"
+  }
+}

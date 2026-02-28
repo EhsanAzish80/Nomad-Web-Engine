@@ -14,8 +14,25 @@ struct ContentView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // URL bar
+            // URL bar with navigation buttons
             HStack {
+                // Back button
+                Button(action: {
+                    engine.goBack()
+                }) {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(!engine.canGoBack())
+                
+                // Forward button
+                Button(action: {
+                    engine.goForward()
+                }) {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(!engine.canGoForward())
+                
+                // URL text field
                 TextField("Enter URL", text: $urlText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit {
@@ -52,8 +69,8 @@ struct ContentView: View {
                     RenderView(
                         displayList: displayList,
                         onLinkClick: { url in
-                            urlText = url
-                            loadURL()
+                            // Use navigate for links to handle relative URLs
+                            engine.navigate(url)
                         },
                         onFormSubmit: { inputs in
                             engine.submitForm(formIndex: 0, inputs: inputs)

@@ -56,6 +56,34 @@ class NomadEngineWrapper: ObservableObject {
         }
     }
     
+    /// Navigates to a URL, resolving it relative to the current page.
+    /// Use this for link clicks instead of loadURL.
+    func navigate(_ urlString: String) {
+        guard let engine = engine else {
+            error = "Engine not initialized"
+            return
+        }
+        
+        isLoading = true
+        error = nil
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = urlString.withCString { urlPtr in
+                nomad_engine_navigate(engine, urlPtr)
+            }
+            
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                if result == 0 {
+                    self?.updateDisplayList()
+                } else {
+                    self?.error = "Failed to navigate (error code: \(result))"
+                }
+            }
+        }
+    }
+    
     /// Updates the viewport width
     func setViewportWidth(_ width: Float) {
         guard let engine = engine else { return }
@@ -76,19 +104,78 @@ class NomadEngineWrapper: ObservableObject {
             return
         }
         
-        // TODO: Fix Swift bridging for nomad_engine_submit_form
-        // The function exists in the dylib but Swift can't find it through the bridge
-        // For now, manually construct the URL with query parameters
-        print("Form submission - inputs: \(inputs)")
+        isLoading = true
+        error = nil
         
-        // Build query string manually
-        let queryString = inputs.map { name, value in
-            "\(name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value)"
-        }.joined(separator: "&")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            // Convert inputs to JSON array format: [["key", "value"], ...]
+            let inputsArray = inputs.map { [$0.0, $0.1] }
+            
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: inputsArray),
+                  let jsonString = String(data: jsonData, encoding: .utf8) else {
+                self?.error = "Failed to encode form inputs"
+                self?.isLoading = false
+                return
+            }
+            
+            let result = jsonString.withCString { jsonPtr in
+                nomad_engine_submit_form(engine, formIndex, jsonPtr)
+            }
+            
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                if result == 0 {
+                    self?.updateDisplayList()
+                } else {
+                    self?.error = "Failed to submit form (error code: \(result))"
+                }
+            }
+        }
+    }
+    
+    /// Goes back in navigation history
+    func goBack() {
+        guard let engine = engine else {
+            error = "Engine not initialized"
+            return
+        }
         
-        // For now, just print it - full implementation requires fixing Swift FFI
-        print("Would navigate to URL with query: ?\(queryString)")
-        error = "Form submission not yet fully implemented in Swift layer"
+        let result = nomad_engine_go_back(engine)
+        
+        if result == 0 {
+            updateDisplayList()
+        } else {
+            error = "Cannot go back"
+        }
+    }
+    
+    /// Goes forward in navigation history
+    func goForward() {
+        guard let engine = engine else {
+            error = "Engine not initialized"
+            return
+        }
+        
+        let result = nomad_engine_go_forward(engine)
+        
+        if result == 0 {
+            updateDisplayList()
+        } else {
+            error = "Cannot go forward"
+        }
+    }
+    
+    /// Checks if can go back
+    func canGoBack() -> Bool {
+        guard let engine = engine else { return false }
+        return nomad_engine_can_go_back(engine) == 1
+    }
+    
+    /// Checks if can go forward
+    func canGoForward() -> Bool {
+        guard let engine = engine else { return false }
+        return nomad_engine_can_go_forward(engine) == 1
     }
     
     /// Updates the display list from the engine
