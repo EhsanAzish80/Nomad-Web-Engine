@@ -9,6 +9,7 @@ members = [
     "crates/nomad-js",
     "crates/nomad-render",
     "bindings/c-api",
+    "examples/headless-demo",
 ]
 
 [workspace.package]

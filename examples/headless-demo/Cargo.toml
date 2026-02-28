@@ -1,0 +1,12 @@
+[package]
+name = "headless-demo"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[[bin]]
+name = "headless-demo"
+path = "src/main.rs"
+
+[dependencies]
+nomad-core = { path = "../../crates/nomad-core" }

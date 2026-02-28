@@ -7,4 +7,3 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
-nomad-core = { path = "../nomad-core" }

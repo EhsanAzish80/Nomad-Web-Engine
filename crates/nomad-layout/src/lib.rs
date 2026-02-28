@@ -2,23 +2,26 @@
 //!
 //! Computes layout and positions elements based on CSS box model.
 
-use nomad_core::NomadCore;
 use nomad_style::StyleSheet;
 
 /// Layout engine placeholder struct.
-pub struct LayoutEngine {
-    _core: NomadCore,
-}
+pub struct LayoutEngine {}
 
 impl LayoutEngine {
     /// Creates a new layout engine.
-    pub fn new(core: NomadCore) -> Self {
-        Self { _core: core }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Computes layout (placeholder).
     pub fn compute_layout(&self, _stylesheet: &StyleSheet) -> Result<LayoutTree, String> {
         Ok(LayoutTree::new())
+    }
+}
+
+impl Default for LayoutEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -51,8 +54,7 @@ mod tests {
 
     #[test]
     fn test_layout_engine_creation() {
-        let core = NomadCore::new();
-        let engine = LayoutEngine::new(core);
+        let engine = LayoutEngine::new();
         let stylesheet = StyleSheet::new();
         let tree = engine.compute_layout(&stylesheet).unwrap();
         assert_eq!(tree.box_count(), 0);

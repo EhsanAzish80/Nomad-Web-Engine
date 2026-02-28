@@ -13,7 +13,7 @@ Nomad Web Engine is a modular, production-ready web rendering engine designed fo
 - **FFI-friendly**: C API bindings for integration with other languages
 - **Performance**: Written in Rust for safety and speed
 
-⚠️ **Early Development**: This project is in its initial setup phase. Core engine logic is not yet implemented.
+🚀 **Milestone 0 Complete**: Basic HTML fetching and text extraction pipeline is functional!
 
 ## Architecture
 
@@ -63,18 +63,38 @@ cargo build --release
 
 ### Running Examples
 
-Examples will be added as the project develops.
+#### Headless Demo (Milestone 0)
+
+A simple CLI app that loads a URL and extracts readable text:
+
+```bash
+# Run the headless demo
+cargo run --example headless-demo -- https://example.com
+
+# Or build first
+cargo build --example headless-demo
+./target/debug/examples/headless-demo https://example.com
+```
+
+See [examples/headless-demo](examples/headless-demo/) for more details.
 
 ## Contributing
+### Milestone 0: Basic Reader ✅
+- [x] Project structure and workspace setup
+- [x] CI pipeline (macOS, Linux, Windows)
+- [x] HTTP/HTTPS fetching with reqwest
+- [x] HTML5 parsing with html5ever
+- [x] DOM tree construction
+- [x] Text extraction from visible elements
+- [x] Resource limits (size, nodes, timeout)
+- [x] Headless demo CLI application
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Security
-
-For security considerations, see [THREAT_MODEL.md](THREAT_MODEL.md).
-
-## License
-
+### Future Milestones
+- [ ] CSS parsing and computed styles
+- [ ] Layout engine (box model, flexbox)
+- [ ] JavaScript execution
+- [ ] Rendering backend
+- [ ] Full browser UI
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Status

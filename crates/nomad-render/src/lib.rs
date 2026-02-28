@@ -2,23 +2,26 @@
 //!
 //! Handles painting and compositing of web content.
 
-use nomad_core::NomadCore;
 use nomad_layout::LayoutTree;
 
 /// Render engine placeholder struct.
-pub struct RenderEngine {
-    _core: NomadCore,
-}
+pub struct RenderEngine {}
 
 impl RenderEngine {
     /// Creates a new render engine.
-    pub fn new(core: NomadCore) -> Self {
-        Self { _core: core }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Renders a layout tree (placeholder).
     pub fn render(&self, _layout: &LayoutTree) -> Result<RenderOutput, String> {
         Ok(RenderOutput::new())
+    }
+}
+
+impl Default for RenderEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -53,8 +56,7 @@ mod tests {
 
     #[test]
     fn test_render_engine_creation() {
-        let core = NomadCore::new();
-        let engine = RenderEngine::new(core);
+        let engine = RenderEngine::new();
         let layout = LayoutTree::new();
         let output = engine.render(&layout).unwrap();
         assert_eq!(output.pixels_rendered(), 0);

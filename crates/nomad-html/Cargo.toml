@@ -8,3 +8,6 @@ authors.workspace = true
 
 [dependencies]
 nomad-core = { path = "../nomad-core" }
+html5ever = "0.26"
+markup5ever_rcdom = "0.2"
+thiserror = "1.0"

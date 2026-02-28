@@ -2,22 +2,24 @@
 //!
 //! Handles CSS parsing, cascade resolution, and computed styles.
 
-use nomad_core::NomadCore;
-
 /// Style engine placeholder struct.
-pub struct StyleEngine {
-    _core: NomadCore,
-}
+pub struct StyleEngine {}
 
 impl StyleEngine {
     /// Creates a new style engine.
-    pub fn new(core: NomadCore) -> Self {
-        Self { _core: core }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Parses CSS content (placeholder).
     pub fn parse_css(&self, _css: &str) -> Result<StyleSheet, String> {
         Ok(StyleSheet::new())
+    }
+}
+
+impl Default for StyleEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -50,8 +52,7 @@ mod tests {
 
     #[test]
     fn test_style_engine_creation() {
-        let core = NomadCore::new();
-        let engine = StyleEngine::new(core);
+        let engine = StyleEngine::new();
         let sheet = engine.parse_css("body { color: red; }").unwrap();
         assert_eq!(sheet.rule_count(), 0);
     }

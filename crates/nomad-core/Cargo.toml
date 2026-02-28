@@ -7,3 +7,6 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+nomad-net = { path = "../nomad-net" }
+nomad-html = { path = "../nomad-html" }
+thiserror = "1.0"

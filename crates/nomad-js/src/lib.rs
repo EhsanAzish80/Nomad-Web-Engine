@@ -2,22 +2,24 @@
 //!
 //! Provides JavaScript runtime integration and DOM bindings.
 
-use nomad_core::NomadCore;
-
 /// JavaScript engine placeholder struct.
-pub struct JsEngine {
-    _core: NomadCore,
-}
+pub struct JsEngine {}
 
 impl JsEngine {
     /// Creates a new JavaScript engine.
-    pub fn new(core: NomadCore) -> Self {
-        Self { _core: core }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Evaluates JavaScript code (placeholder).
     pub fn eval(&self, _code: &str) -> Result<JsValue, String> {
         Ok(JsValue::Undefined)
+    }
+}
+
+impl Default for JsEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -37,8 +39,7 @@ mod tests {
 
     #[test]
     fn test_js_engine_creation() {
-        let core = NomadCore::new();
-        let engine = JsEngine::new(core);
+        let engine = JsEngine::new();
         let result = engine.eval("1 + 1").unwrap();
         assert_eq!(result, JsValue::Undefined);
     }
