@@ -97,3 +97,29 @@ impl Rect {
         px >= self.x && px <= self.x + self.width && py >= self.y && py <= self.y + self.height
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_json_serialization() {
+        let mut list = DisplayList::new(800.0);
+        
+        list.add_item(DisplayItem {
+            kind: DisplayItemKind::Text {
+                content: "Hello".to_string(),
+                font_size: 16.0,
+                is_link: false,
+                link_url: None,
+            },
+            bounds: Rect::new(20.0, 20.0, 50.0, 16.0),
+        });
+        
+        let json = serde_json::to_string_pretty(&list).unwrap();
+        println!("JSON format:\n{}", json);
+        
+        // Verify it can be deserialized
+        let _: DisplayList = serde_json::from_str(&json).unwrap();
+    }
+}
