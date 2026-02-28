@@ -78,6 +78,26 @@ cargo build --example headless-demo
 
 See [examples/headless-demo](examples/headless-demo/) for more details.
 
+#### macOS Browser App
+
+A native macOS browser with SwiftUI interface:
+
+```bash
+# Build the Rust engine
+cd apps/nomad-browser-macos
+./build_rust.sh
+
+# Open in Xcode and build (⌘B) or run (⌘R)
+# See apps/nomad-browser-macos/BUILD.md for detailed instructions
+```
+
+Features:
+- Single window browsing
+- URL input bar
+- Text rendering from Rust engine
+- Clickable links
+- Vertical scrolling
+
 ## Contributing
 ### Milestone 0: Basic Reader ✅
 - [x] Project structure and workspace setup
@@ -99,15 +119,32 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Status
 
-- [x] Project structure
-- [x] Workspace setup
-- [x] CI pipeline
-- [ ] Core engine implementation
-- [ ] HTML parsing
-- [ ] CSS styling
-- [ ] Layout engine
-- [ ] JavaScript integration
-- [ ] Rendering backend
+### Milestone 0: Basic Reader ✅
+- [x] Project structure and workspace setup
+- [x] CI pipeline (macOS, Linux, Windows)
+- [x] HTTP/HTTPS fetching with reqwest
+- [x] HTML5 parsing with html5ever
+- [x] DOM tree construction
+- [x] Text extraction from visible elements
+- [x] Resource limits (size, nodes, timeout)
+- [x] Headless demo CLI application
+
+### Milestone 1: macOS Browser ✅
+- [x] Display list and layout system
+- [x] C API for FFI integration
+- [x] Basic text layout with word wrapping
+- [x] macOS SwiftUI application
+- [x] URL input and navigation
+- [x] Text rendering with CoreGraphics
+- [x] Link detection and click handling
+- [x] Vertical scrolling
+
+### Future Milestones
+- [ ] CSS parsing and computed styles
+- [ ] Enhanced layout (flexbox, tables)
+- [ ] JavaScript execution
+- [ ] Image support
+- [ ] Full rendering pipeline
 
 ## Community
 

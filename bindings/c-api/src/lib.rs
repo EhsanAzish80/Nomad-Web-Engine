@@ -2,9 +2,10 @@
 //!
 //! Provides a C-compatible FFI interface to the Rust engine.
 
-use std::ptr;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
+use std::ptr;
+use std::slice;
 
 use nomad_core::Engine;
 
@@ -12,6 +13,23 @@ use nomad_core::Engine;
 #[repr(C)]
 pub struct NomadEngine {
     engine: Engine,
+}
+
+/// A byte buffer returned from the engine.
+#[repr(C)]
+pub struct ByteBuffer {
+    pub data: *mut u8,
+    pub len: usize,
+}
+
+impl ByteBuffer {
+    fn from_vec(vec: Vec<u8>) -> Self {
+        let mut vec = vec;
+        let data = vec.as_mut_ptr();
+        let len = vec.len();
+        std::mem::forget(vec); // Prevent Rust from freeing the memory
+        Self { data, len }
+    }
 }
 
 /// Creates a new Nomad engine instance.
@@ -44,11 +62,9 @@ pub unsafe extern "C" fn nomad_engine_destroy(engine: *mut NomadEngine) {
     }
 }
 
-/// Loads a URL and returns the extracted text.
+/// Loads a URL in the engine.
 ///
-/// Returns a pointer to a null-terminated C string containing the text,
-/// or null on failure. The caller must free the returned string with
-/// `nomad_free_string`.
+/// Returns 0 on success, non-zero on failure.
 ///
 /// # Safety
 ///
@@ -56,24 +72,88 @@ pub unsafe extern "C" fn nomad_engine_destroy(engine: *mut NomadEngine) {
 /// The url pointer must be a valid null-terminated C string.
 #[no_mangle]
 pub unsafe extern "C" fn nomad_engine_load_url(
-    engine: *const NomadEngine,
+    engine: *mut NomadEngine,
     url: *const c_char,
-) -> *mut c_char {
+) -> i32 {
     if engine.is_null() || url.is_null() {
-        return ptr::null_mut();
+        return -1;
     }
 
     let url_str = match CStr::from_ptr(url).to_str() {
         Ok(s) => s,
-        Err(_) => return ptr::null_mut(),
+        Err(_) => return -2,
     };
 
     match (*engine).engine.load_url(url_str) {
-        Ok(text) => match CString::new(text) {
-            Ok(c_string) => c_string.into_raw(),
-            Err(_) => ptr::null_mut(),
+        Ok(_) => 0,
+        Err(_) => -3,
+    }
+}
+
+/// Ticks the engine (for future animations/updates).
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_tick(engine: *mut NomadEngine) {
+    if !engine.is_null() {
+        (*engine).engine.tick();
+    }
+}
+
+/// Gets the display list from the engine as a byte buffer.
+///
+/// Returns a ByteBuffer with data and length. The caller must free the buffer
+/// with `nomad_free_byte_buffer`.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_get_display_list(
+    engine: *const NomadEngine,
+) -> ByteBuffer {
+    if engine.is_null() {
+        return ByteBuffer {
+            data: ptr::null_mut(),
+            len: 0,
+        };
+    }
+
+    match (*engine).engine.get_display_list_bytes() {
+        Ok(bytes) => ByteBuffer::from_vec(bytes),
+        Err(_) => ByteBuffer {
+            data: ptr::null_mut(),
+            len: 0,
         },
-        Err(_) => ptr::null_mut(),
+    }
+}
+
+/// Sets the viewport width for layout.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_set_viewport_width(
+    engine: *mut NomadEngine,
+    width: f32,
+) {
+    if !engine.is_null() {
+        (*engine).engine.set_viewport_width(width);
+    }
+}
+
+/// Frees a byte buffer returned by the engine.
+///
+/// # Safety
+///
+/// The buffer must have been returned by a Nomad engine function.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_free_byte_buffer(buffer: ByteBuffer) {
+    if !buffer.data.is_null() && buffer.len > 0 {
+        drop(Vec::from_raw_parts(buffer.data, buffer.len, buffer.len));
     }
 }
 
@@ -107,6 +187,16 @@ mod tests {
         unsafe {
             nomad_engine_destroy(ptr::null_mut());
             nomad_free_string(ptr::null_mut());
+        }
+    }
+
+    #[test]
+    fn test_tick() {
+        unsafe {
+            let engine = nomad_engine_create();
+            assert!(!engine.is_null());
+            nomad_engine_tick(engine);
+            nomad_engine_destroy(engine);
         }
     }
 }

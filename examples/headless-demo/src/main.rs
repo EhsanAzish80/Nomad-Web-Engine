@@ -20,7 +20,7 @@ fn main() {
     let url = &args[1];
 
     // Create the engine
-    let engine = match Engine::new() {
+    let mut engine = match Engine::new() {
         Ok(engine) => engine,
         Err(e) => {
             eprintln!("Failed to initialize engine: {}", e);

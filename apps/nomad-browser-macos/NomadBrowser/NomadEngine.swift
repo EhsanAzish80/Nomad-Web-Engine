@@ -1,0 +1,100 @@
+//
+//  NomadEngine.swift
+//  NomadBrowser
+//
+//  Swift wrapper around the Rust engine C API
+//
+
+import Foundation
+
+/// Wrapper around the Nomad Web Engine
+class NomadEngineWrapper: ObservableObject {
+    private var engine: OpaquePointer?
+    
+    @Published var displayList: DisplayList?
+    @Published var isLoading: Bool = false
+    @Published var error: String?
+    
+    init() {
+        engine = nomad_engine_create()
+        if engine == nil {
+            error = "Failed to create engine"
+        }
+    }
+    
+    deinit {
+        if let engine = engine {
+            nomad_engine_destroy(engine)
+        }
+    }
+    
+    /// Loads a URL
+    func loadURL(_ urlString: String) {
+        guard let engine = engine else {
+            error = "Engine not initialized"
+            return
+        }
+        
+        isLoading = true
+        error = nil
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = urlString.withCString { urlPtr in
+                nomad_engine_load_url(engine, urlPtr)
+            }
+            
+            DispatchQueue.main.async {
+                self?.isLoading = false
+                
+                if result == 0 {
+                    self?.updateDisplayList()
+                } else {
+                    self?.error = "Failed to load URL (error code: \(result))"
+                }
+            }
+        }
+    }
+    
+    /// Updates the viewport width
+    func setViewportWidth(_ width: Float) {
+        guard let engine = engine else { return }
+        nomad_engine_set_viewport_width(engine, width)
+        updateDisplayList()
+    }
+    
+    /// Ticks the engine
+    func tick() {
+        guard let engine = engine else { return }
+        nomad_engine_tick(engine)
+    }
+    
+    /// Updates the display list from the engine
+    private func updateDisplayList() {
+        guard let engine = engine else { return }
+        
+        let buffer = nomad_engine_get_display_list(engine)
+        
+        guard buffer.data != nil, buffer.len > 0 else {
+            error = "Empty display list"
+            return
+        }
+        
+        let data = Data(bytes: buffer.data!, count: buffer.len)
+        nomad_free_byte_buffer(buffer)
+        
+        do {
+            // Decode JSON from the engine
+            let decoder = JSONDecoder()
+            decoder.keyDecodingStrategy = .convertFromSnakeCase
+            let list = try decoder.decode(DisplayList.self, from: data)
+            
+            DispatchQueue.main.async {
+                self.displayList = list
+            }
+        } catch {
+            DispatchQueue.main.async {
+                self.error = "Failed to decode display list: \(error.localizedDescription)"
+            }
+        }
+    }
+}

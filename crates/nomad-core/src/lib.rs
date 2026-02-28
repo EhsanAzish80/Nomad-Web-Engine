@@ -3,9 +3,15 @@
 //! This crate provides foundational types and utilities used across
 //! the entire web engine.
 
-use nomad_html::{HtmlError, HtmlParser};
+use nomad_html::{DomTree, HtmlError, HtmlParser};
 use nomad_net::{NetworkError, NetworkLayer};
 use thiserror::Error;
+
+pub mod display_list;
+pub mod layout;
+
+pub use display_list::{DisplayItem, DisplayItemKind, DisplayList, Rect};
+pub use layout::{layout_dom, LayoutConfig};
 
 /// Errors that can occur during engine operations.
 #[derive(Error, Debug)]
@@ -18,6 +24,12 @@ pub enum EngineError {
 
     #[error("Engine not initialized")]
     NotInitialized,
+
+    #[error("No content loaded")]
+    NoContent,
+
+    #[error("Serialization error: {0}")]
+    Serialization(String),
 }
 
 /// Configuration for the engine.
@@ -45,6 +57,9 @@ pub struct Engine {
     network: NetworkLayer,
     html_parser: HtmlParser,
     config: EngineConfig,
+    layout_config: LayoutConfig,
+    current_dom: Option<DomTree>,
+    current_display_list: Option<DisplayList>,
 }
 
 impl Engine {
@@ -62,6 +77,9 @@ impl Engine {
             network,
             html_parser,
             config,
+            layout_config: LayoutConfig::default(),
+            current_dom: None,
+            current_display_list: None,
         })
     }
 
@@ -87,15 +105,62 @@ impl Engine {
     /// - The network request fails
     /// - HTML parsing fails
     /// - Resource limits are exceeded
-    pub fn load_url(&self, url: &str) -> Result<String, EngineError> {
+    pub fn load_url(&mut self, url: &str) -> Result<String, EngineError> {
         // Fetch HTML
         let response = self.network.fetch(url)?;
 
         // Parse HTML into DOM
         let dom = self.html_parser.parse(&response.body)?;
 
+        // Store the DOM
+        let text = dom.extract_text();
+        self.current_dom = Some(dom);
+
+        // Generate initial display list
+        self.regenerate_display_list()?;
+
         // Extract and return text
-        Ok(dom.extract_text())
+        Ok(text)
+    }
+
+    /// Regenerates the display list from the current DOM.
+    pub fn regenerate_display_list(&mut self) -> Result<(), EngineError> {
+        if let Some(ref dom) = self.current_dom {
+            let display_list = layout_dom(dom.document(), self.layout_config.clone());
+            self.current_display_list = Some(display_list);
+            Ok(())
+        } else {
+            Err(EngineError::NoContent)
+        }
+    }
+
+    /// Returns the current display list as bytes.
+    pub fn get_display_list_bytes(&self) -> Result<Vec<u8>, EngineError> {
+        if let Some(ref display_list) = self.current_display_list {
+            display_list
+                .to_bytes()
+                .map_err(EngineError::Serialization)
+        } else {
+            Err(EngineError::NoContent)
+        }
+    }
+
+    /// Returns a reference to the current display list.
+    pub fn get_display_list(&self) -> Option<&DisplayList> {
+        self.current_display_list.as_ref()
+    }
+
+    /// Ticks the engine (for future animation/updates).
+    pub fn tick(&mut self) {
+        // Placeholder for future updates
+    }
+
+    /// Sets the viewport width for layout.
+    pub fn set_viewport_width(&mut self, width: f32) {
+        self.layout_config.viewport_width = width;
+        self.layout_config.max_line_width = width - self.layout_config.padding_left - self.layout_config.padding_right;
+        // Regenerate layout if we have content
+        let _ = self.regenerate_display_list();
     }
 
     /// Loads a URL and prints the extracted text to stdout.
@@ -109,7 +174,7 @@ impl Engine {
     /// # Errors
     ///
     /// Returns an error if loading fails.
-    pub fn load_url_and_print(&self, url: &str) -> Result<(), EngineError> {
+    pub fn load_url_and_print(&mut self, url: &str) -> Result<(), EngineError> {
         let text = self.load_url(url)?;
         println!("{}", text);
         Ok(())
