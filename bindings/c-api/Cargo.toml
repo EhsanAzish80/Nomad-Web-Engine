@@ -1,0 +1,19 @@
+[package]
+name = "nomad-c-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+nomad-core = { path = "../../crates/nomad-core" }
+nomad-net = { path = "../../crates/nomad-net" }
+nomad-html = { path = "../../crates/nomad-html" }
+nomad-style = { path = "../../crates/nomad-style" }
+nomad-layout = { path = "../../crates/nomad-layout" }
+nomad-js = { path = "../../crates/nomad-js" }
+nomad-render = { path = "../../crates/nomad-render" }
