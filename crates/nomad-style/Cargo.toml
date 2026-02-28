@@ -12,3 +12,4 @@ selectors = "0.25"
 markup5ever = "0.12"
 markup5ever_rcdom = "0.2"
 thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }

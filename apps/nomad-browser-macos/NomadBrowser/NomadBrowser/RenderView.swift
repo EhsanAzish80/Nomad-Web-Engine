@@ -92,7 +92,20 @@ struct RenderView: View {
             attributedString.underlineStyle = .single
         }
         
-        context.draw(Text(attributedString), at: rect.origin, anchor: .topLeading)
+        // Apply text alignment
+        let (anchor, xOffset): (UnitPoint, CGFloat) = {
+            switch textItem.textAlign {
+            case .Left:
+                return (.topLeading, 0)
+            case .Center:
+                return (.top, CGFloat(bounds.width) / 2)
+            case .Right:
+                return (.topTrailing, CGFloat(bounds.width))
+            }
+        }()
+        
+        let drawPoint = CGPoint(x: CGFloat(bounds.x) + xOffset, y: CGFloat(bounds.y))
+        context.draw(Text(attributedString), at: drawPoint, anchor: anchor)
     }
     
     private func handleButtonClick(_ button: ButtonItem) {

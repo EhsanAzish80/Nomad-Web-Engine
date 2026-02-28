@@ -54,6 +54,7 @@ pub enum LayoutContent {
         font_size: f32,
         is_link: bool,
         link_url: Option<String>,
+        text_align: nomad_style::TextAlign,
     },
     Input {
         name: String,
@@ -297,6 +298,7 @@ impl LayoutEngine {
                     font_size: style.font_size,
                     is_link: false,
                     link_url: None,
+                    text_align: style.text_align,
                 }
             }
             NodeData::Element { ref name, ref attrs, .. } => {

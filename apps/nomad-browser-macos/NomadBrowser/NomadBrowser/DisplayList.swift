@@ -72,13 +72,22 @@ struct TextItem: Codable {
     let fontSize: Float
     let isLink: Bool
     let linkUrl: String?
+    let textAlign: TextAlign
     
     enum CodingKeys: String, CodingKey {
         case content
         case fontSize = "font_size"
         case isLink = "is_link"
         case linkUrl = "link_url"
+        case textAlign = "text_align"
     }
+}
+
+/// Text alignment
+enum TextAlign: String, Codable {
+    case Left
+    case Center
+    case Right
 }
 
 /// Input display item

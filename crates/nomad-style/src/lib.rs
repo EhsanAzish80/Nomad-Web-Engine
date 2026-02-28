@@ -64,7 +64,7 @@ pub enum AlignItems {
 }
 
 /// Text alignment.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum TextAlign {
     #[default]
     Left,
@@ -201,12 +201,18 @@ impl StyleSheet {
 
     /// Parse CSS from a string.
     /// Silently ignores unsupported rules and properties.
+    /// Enforces MAX_CSS_RULES limit for security.
     pub fn parse(css: &str) -> Self {
         let mut stylesheet = Self::new();
         let mut input = ParserInput::new(css);
         let mut parser = Parser::new(&mut input);
 
         while !parser.is_exhausted() {
+            // Enforce MAX_CSS_RULES limit
+            if stylesheet.rules.len() >= MAX_CSS_RULES {
+                break;
+            }
+            
             // Skip whitespace and comments
             let _ = parser.skip_whitespace();
             
@@ -332,7 +338,7 @@ fn matches_ancestors(node: &Handle, parts: &[SimpleSelector]) -> bool {
     let target = &parts[parts.len() - 1];
     let remaining = &parts[..parts.len() - 1];
     
-    while let Some(parent_weak) = current {
+    while let Some(ref parent_weak) = current {
         if let Some(parent) = parent_weak.upgrade() {
             let (tag, classes, id) = extract_element_info(&parent);
             
@@ -341,13 +347,13 @@ fn matches_ancestors(node: &Handle, parts: &[SimpleSelector]) -> bool {
                 // Continue checking remaining selectors up the ancestor chain
                 if remaining.is_empty() {
                     // Restore parent reference
-                    node.parent.set(Some(parent_weak));
+                    node.parent.set(current.take());
                     return true;
                 }
                 
                 // Recursively check remaining ancestors
                 let result = matches_ancestors(&parent, remaining);
-                node.parent.set(Some(parent_weak));
+                node.parent.set(current.take());
                 return result;
             }
             
@@ -411,30 +417,22 @@ fn parse_selector<'i, 't>(parser: &mut Parser<'i, 't>) -> Result<Selector, Parse
     loop {
         let _ = parser.skip_whitespace();
         
-        // Peek ahead to see if there's another selector part
-        let has_more = parser.try_parse(|p| {
-            // Check if next token could start a selector
-            let token = p.next()?;
-            match token {
-                Token::Ident(_) | Token::Delim('.') | Token::IDHash(_) | Token::Delim('*') => Ok(()),
-                _ => Err(p.new_unexpected_token_error(token.clone())),
-            }
-        }).is_ok();
+        // Try to parse another selector using try_parse to avoid consuming on failure
+        let result = parser.try_parse(|p| parse_simple_selector(p));
         
-        if !has_more {
-            break;
-        }
-        
-        // Parse next part
-        if let Ok(part) = parse_simple_selector(parser) {
-            parts.push(part);
-            
-            // Enforce max selector depth
-            if parts.len() > MAX_SELECTOR_DEPTH {
-                return Err(parser.new_custom_error(()));
+        match result {
+            Ok(part) => {
+                parts.push(part);
+                
+                // Enforce max selector depth
+                if parts.len() > MAX_SELECTOR_DEPTH {
+                    return Err(parser.new_custom_error(()));
+                }
             }
-        } else {
-            break;
+            Err(_) => {
+                // No more selectors, done
+                break;
+            }
         }
     }
     
@@ -724,14 +722,14 @@ mod tests {
         assert_eq!(stylesheet.rules.len(), 3);
 
         // Check first rule
-        assert_eq!(stylesheet.rules[0].selector, SimpleSelector::Tag("div".to_string()));
+        assert_eq!(stylesheet.rules[0].selector, Selector::Simple(SimpleSelector::Tag("div".to_string())));
         assert_eq!(stylesheet.rules[0].declarations.len(), 1);
 
         // Check second rule
-        assert_eq!(stylesheet.rules[1].selector, SimpleSelector::Class("container".to_string()));
+        assert_eq!(stylesheet.rules[1].selector, Selector::Simple(SimpleSelector::Class("container".to_string())));
 
         // Check third rule
-        assert_eq!(stylesheet.rules[2].selector, SimpleSelector::Id("main".to_string()));
+        assert_eq!(stylesheet.rules[2].selector, Selector::Simple(SimpleSelector::Id("main".to_string())));
     }
 
     #[test]
@@ -773,5 +771,41 @@ mod tests {
         assert_eq!(style.display, Display::Block);
         assert_eq!(style.font_size, 16.0);
         assert_eq!(style.flex_direction, FlexDirection::Row);
+        assert_eq!(style.text_align, TextAlign::Left);
+    }
+
+    #[test]
+    fn test_descendant_selector_parsing() {
+        let css = r#"div p { font-size: 14px; }"#;
+
+        let stylesheet = StyleSheet::parse(css);
+        assert_eq!(stylesheet.rules.len(), 1);
+
+        // Check first rule (div p)
+        match &stylesheet.rules[0].selector {
+            Selector::Descendant(parts) => {
+                assert_eq!(parts.len(), 2);
+                assert_eq!(parts[0], SimpleSelector::Tag("div".to_string()));
+                assert_eq!(parts[1], SimpleSelector::Tag("p".to_string()));
+            }
+            _ => panic!("Expected descendant selector, got: {:?}", stylesheet.rules[0].selector),
+        }
+    }
+
+    #[test]
+    fn test_text_align_parsing() {
+        let css = r#"
+            .left { text-align: left; }
+            .center { text-align: center; }
+            .right { text-align: right; }
+        "#;
+
+        let stylesheet = StyleSheet::parse(css);
+        assert_eq!(stylesheet.rules.len(), 3);
+        
+        // Verify all rules have text-align declarations
+        for rule in &stylesheet.rules {
+            assert!(rule.declarations.iter().any(|d| d.property == "text-align"));
+        }
     }
 }

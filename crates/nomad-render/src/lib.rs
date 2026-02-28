@@ -3,6 +3,7 @@
 //! Converts layout boxes into a display list for cross-platform rendering.
 
 use nomad_layout::{LayoutBox, LayoutContent};
+use nomad_style::TextAlign;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -69,6 +70,8 @@ pub enum DisplayItemKind {
         is_link: bool,
         /// URL if this is a link
         link_url: Option<String>,
+        /// Text alignment
+        text_align: TextAlign,
     },
     /// Container box (for debugging/future use)
     Box {
@@ -169,6 +172,7 @@ impl RenderEngine {
                 font_size,
                 is_link,
                 link_url,
+                text_align,
             } => {
                 if !content.trim().is_empty() {
                     display_list.items.push(DisplayItem {
@@ -177,6 +181,7 @@ impl RenderEngine {
                             font_size: *font_size,
                             is_link: *is_link,
                             link_url: link_url.clone(),
+                            text_align: *text_align,
                         },
                         bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
                     });
@@ -248,6 +253,7 @@ mod tests {
                 font_size: 16.0,
                 is_link: false,
                 link_url: None,
+                text_align: TextAlign::Left,
             },
             bounds: Rect::new(20.0, 20.0, 50.0, 16.0),
         });

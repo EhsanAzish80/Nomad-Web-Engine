@@ -145,9 +145,53 @@ impl Engine {
         // Extract text for return value
         let text = dom.extract_text();
 
-        // Extract CSS from <style> tags
-        let css = extract_css_from_dom(dom.document());
-        self.current_stylesheet = StyleSheet::parse(&css);
+        // Extract inline CSS from <style> tags
+        let inline_css = extract_css_from_dom(dom.document());
+        
+        // Extract external CSS from <link rel="stylesheet"> tags (same-origin only)
+        let css_urls = extract_external_css_urls(dom.document(), url);
+        
+        // Fetch external CSS files
+        let mut external_css = String::new();
+        for css_url in css_urls {
+            // Resolve relative URLs
+            let absolute_url = if css_url.starts_with("http://") || css_url.starts_with("https://") {
+                css_url
+            } else if css_url.starts_with('/') {
+                // Absolute path relative to origin
+                let origin = get_origin(url);
+                format!("{}{}", origin, css_url)
+            } else {
+                // Relative path
+                if let Some(last_slash) = url.rfind('/') {
+                    let base = &url[..last_slash + 1];
+                    format!("{}{}", base, css_url)
+                } else {
+                    css_url
+                }
+            };
+            
+            // Fetch CSS with size limit
+            match self.network.fetch(&absolute_url) {
+                Ok(response) => {
+                    // Enforce MAX_CSS_FILE_SIZE limit (1MB)
+                    if response.body.len() <= nomad_style::MAX_CSS_FILE_SIZE {
+                        external_css.push_str(&response.body);
+                        external_css.push('\n');
+                    }
+                }
+                Err(_) => {
+                    // Ignore CSS fetch errors, continue with what we have
+                }
+            }
+        }
+        
+        // Merge CSS: external first, then inline (per CSS cascade rules)
+        let mut combined_css = external_css;
+        combined_css.push_str(&inline_css);
+        
+        // Parse stylesheet with automatic rule limiting
+        self.current_stylesheet = StyleSheet::parse(&combined_css);
 
         // Extract form metadata
         self.current_forms = extract_forms_from_dom(dom.document(), url);
@@ -327,6 +371,88 @@ fn extract_css_recursive(handle: &Handle, css: &mut String) {
             }
         }
     }
+}
+
+/// Extract external CSS stylesheet URLs from <link rel="stylesheet"> tags.
+/// Returns URLs that are same-origin as the base URL.
+fn extract_external_css_urls(handle: &Handle, base_url: &str) -> Vec<String> {
+    let mut urls = Vec::new();
+    
+    // Parse base URL to get origin
+    let base_origin = get_origin(base_url);
+    
+    extract_css_links_recursive(handle, &mut urls, &base_origin);
+    
+    // Enforce MAX_CSS_FILES limit
+    urls.truncate(nomad_style::MAX_CSS_FILES);
+    
+    urls
+}
+
+/// Recursively extract stylesheet URLs from <link> tags.
+fn extract_css_links_recursive(handle: &Handle, urls: &mut Vec<String>, base_origin: &str) {
+    match &handle.data {
+        NodeData::Element { ref name, ref attrs, .. } => {
+            let tag_name = name.local.as_ref();
+            
+            if tag_name == "link" {
+                let attrs = attrs.borrow();
+                
+                // Check if rel="stylesheet"
+                let is_stylesheet = attrs.iter()
+                    .any(|a| a.name.local.as_ref() == "rel" && a.value.to_string() == "stylesheet");
+                
+                if is_stylesheet {
+                    // Get href attribute
+                    if let Some(href_attr) = attrs.iter().find(|a| a.name.local.as_ref() == "href") {
+                        let href = href_attr.value.to_string();
+                        
+                        // Check same-origin (only allow same origin for security)
+                        if is_same_origin(&href, base_origin) {
+                            urls.push(href);
+                        }
+                    }
+                }
+            }
+            
+            // Continue searching in children
+            for child in handle.children.borrow().iter() {
+                extract_css_links_recursive(child, urls, base_origin);
+            }
+        }
+        _ => {
+            // For non-element nodes, search children
+            for child in handle.children.borrow().iter() {
+                extract_css_links_recursive(child, urls, base_origin);
+            }
+        }
+    }
+}
+
+/// Get the origin (scheme + host + port) from a URL.
+fn get_origin(url: &str) -> String {
+    if let Some(scheme_end) = url.find("://") {
+        let after_scheme = &url[scheme_end + 3..];
+        if let Some(path_start) = after_scheme.find('/') {
+            let host = &after_scheme[..path_start];
+            return format!("{}://{}", &url[..scheme_end], host);
+        } else {
+            return format!("{}://{}", &url[..scheme_end], after_scheme);
+        }
+    }
+    String::new()
+}
+
+/// Check if a URL is same-origin or relative.
+fn is_same_origin(href: &str, base_origin: &str) -> bool {
+    // Relative URLs are considered same-origin
+    if !href.starts_with("http://") && !href.starts_with("https://") {
+        return true;
+    }
+    
+    // Absolute URLs must match origin
+    let href_origin = get_origin(href);
+    href_origin == base_origin
 }
 
 /// Extract form metadata from the DOM.
