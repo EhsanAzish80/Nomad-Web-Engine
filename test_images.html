@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Test - Nomad Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .image-box {
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Support Test</h1>
+    
+    <div class="container">
+        <div class="image-box">
+            <h2>Test 1: Small Image with Dimensions</h2>
+            <img src="https://via.placeholder.com/150" alt="150x150 placeholder" width="150" height="150">
+            <p>This should display a 150x150 pixel placeholder image.</p>
+        </div>
+        
+        <div class="image-box">
+            <h2>Test 2: Medium Image</h2>
+            <img src="https://via.placeholder.com/300x200" alt="300x200 placeholder">
+            <p>This should display a 300x200 pixel placeholder image.</p>
+        </div>
+        
+        <div class="image-box">
+            <h2>Test 3: Image with Alt Text</h2>
+            <img src="https://via.placeholder.com/200" alt="This is alt text for accessibility">
+            <p>This image has alt text that should show while loading.</p>
+        </div>
+        
+        <div class="image-box">
+            <h2>Test 4: Real World Image (Wikipedia Logo)</h2>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Wikipedia-logo-v2.svg/200px-Wikipedia-logo-v2.svg.png" alt="Wikipedia Logo" width="200" height="185">
+            <p>This should display the Wikipedia logo.</p>
+        </div>
+    </div>
+    
+    <p style="text-align: center; margin-top: 40px;">
+        <strong>Note:</strong> Images should load asynchronously and display when ready.
+    </p>
+</body>
+</html>

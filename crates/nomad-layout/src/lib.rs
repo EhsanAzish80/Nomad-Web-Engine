@@ -66,6 +66,14 @@ pub enum LayoutContent {
         button_type: String,
         form_id: Option<String>,
     },
+    Image {
+        src: String,
+        alt: String,
+        /// Intrinsic width (if specified in HTML or loaded)
+        width: Option<f32>,
+        /// Intrinsic height (if specified in HTML or loaded)
+        height: Option<f32>,
+    },
     Anonymous, // For containers without specific content
 }
 
@@ -169,6 +177,13 @@ impl LayoutEngine {
                         continue;
                     }
 
+                    // Handle image elements with intrinsic sizing
+                    if tag_name == "img" {
+                        let img_node = self.create_image_node(child, &style)?;
+                        child_nodes.push(img_node);
+                        continue;
+                    }
+
                     // Recursively build child
                     let child_node = self.build_taffy_tree(child, stylesheet, Some(&style), depth + 1)?;
                     child_nodes.push(child_node);
@@ -209,6 +224,43 @@ impl LayoutEngine {
 
         self.taffy
             .new_leaf(text_style)
+            .map_err(|e| LayoutError::TaffyError(format!("{:?}", e)))
+    }
+
+    /// Create a layout node for an image element.
+    fn create_image_node(&mut self, node: &Handle, _style: &ComputedStyle) -> Result<taffy::prelude::NodeId, LayoutError> {
+        // Extract width and height attributes
+        let mut width: Option<f32> = None;
+        let mut height: Option<f32> = None;
+
+        if let NodeData::Element { ref attrs, .. } = node.data {
+            for attr in attrs.borrow().iter() {
+                match attr.name.local.as_ref() {
+                    "width" => {
+                        width = attr.value.to_string().parse::<f32>().ok();
+                    }
+                    "height" => {
+                        height = attr.value.to_string().parse::<f32>().ok();
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        // Use specified dimensions or defaults
+        let img_width = width.unwrap_or(100.0); // Default width
+        let img_height = height.unwrap_or(100.0); // Default height
+
+        let img_style = Style {
+            size: Size {
+                width: Dimension::Length(img_width),
+                height: Dimension::Length(img_height),
+            },
+            ..Default::default()
+        };
+
+        self.taffy
+            .new_leaf(img_style)
             .map_err(|e| LayoutError::TaffyError(format!("{:?}", e)))
     }
 
@@ -356,6 +408,20 @@ impl LayoutEngine {
                         tag_name,
                         is_link: true,
                         link_url,
+                    }
+                }
+                // Handle images
+                else if tag_name == "img" {
+                    let src = get_attr("src").unwrap_or_default();
+                    let alt = get_attr("alt").unwrap_or_default();
+                    let width = get_attr("width").and_then(|w| w.parse::<f32>().ok());
+                    let height = get_attr("height").and_then(|h| h.parse::<f32>().ok());
+                    
+                    LayoutContent::Image {
+                        src,
+                        alt,
+                        width,
+                        height,
                     }
                 }
                 // Default element handling

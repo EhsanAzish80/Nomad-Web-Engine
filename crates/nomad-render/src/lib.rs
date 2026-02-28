@@ -114,6 +114,17 @@ pub enum DisplayItemKind {
         /// Form ID this button belongs to
         form_id: Option<String>,
     },
+    /// Image element
+    Image {
+        /// Image source URL
+        src: String,
+        /// Alt text for accessibility
+        alt: String,
+        /// Image width
+        width: f32,
+        /// Image height
+        height: f32,
+    },
 }
 
 /// A rectangle.
@@ -175,14 +186,21 @@ pub struct HitRegion {
 pub struct RenderEngine {
     viewport_width: f32,
     next_hit_region_id: usize,
+    base_url: Option<String>,
 }
 
 impl RenderEngine {
     /// Creates a new render engine.
     pub fn new(viewport_width: f32) -> Self {
+        Self::with_base_url(viewport_width, None)
+    }
+
+    /// Creates a new render engine with a base URL for resolving relative URLs.
+    pub fn with_base_url(viewport_width: f32, base_url: Option<String>) -> Self {
         Self { 
             viewport_width,
             next_hit_region_id: 0,
+            base_url,
         }
     }
 
@@ -192,6 +210,7 @@ impl RenderEngine {
         let mut engine = Self {
             viewport_width: self.viewport_width,
             next_hit_region_id: 0,
+            base_url: self.base_url.clone(),
         };
 
         // Recursively add display items
@@ -299,6 +318,29 @@ impl RenderEngine {
                     rect: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
                 });
             }
+            LayoutContent::Image {
+                src,
+                alt,
+                width,
+                height,
+            } => {
+                // Use layout dimensions or specified dimensions
+                let img_width = width.unwrap_or(layout_box.width);
+                let img_height = height.unwrap_or(layout_box.height);
+                
+                // Resolve relative URLs to absolute URLs
+                let absolute_src = self.resolve_url(src);
+                
+                display_list.items.push(DisplayItem {
+                    kind: DisplayItemKind::Image {
+                        src: absolute_src,
+                        alt: alt.clone(),
+                        width: img_width,
+                        height: img_height,
+                    },
+                    bounds: Rect::new(abs_x, abs_y, img_width, img_height),
+                });
+            }
             LayoutContent::Element { is_link, link_url, .. } => {
                 // For link elements, create a clickable area
                 if *is_link {
@@ -334,6 +376,44 @@ impl RenderEngine {
         // Process children
         for child in &layout_box.children {
             self.add_layout_box(display_list, child, abs_x, abs_y);
+        }
+    }
+
+    /// Resolves a relative URL to an absolute URL using the base URL.
+    fn resolve_url(&self, url: &str) -> String {
+        // If it's already an absolute URL, return as-is
+        if url.starts_with("http://") || url.starts_with("https://") {
+            return url.to_string();
+        }
+
+        // If we don't have a base URL, return the URL as-is
+        let Some(ref base) = self.base_url else {
+            return url.to_string();
+        };
+
+        // Handle different types of relative URLs
+        if url.starts_with('/') {
+            // Absolute path relative to origin
+            if let Some(origin_end) = base.find("://").and_then(|i| base[i+3..].find('/').map(|j| i + 3 + j)) {
+                format!("{}{}", &base[..origin_end], url)
+            } else {
+                // No path in base URL, append to origin
+                format!("{}{}", base, url)
+            }
+        } else if url.starts_with("//") {
+            // Protocol-relative URL
+            if let Some(protocol_end) = base.find("://") {
+                format!("{}:{}", &base[..protocol_end], url)
+            } else {
+                url.to_string()
+            }
+        } else {
+            // Relative path
+            if let Some(last_slash) = base.rfind('/') {
+                format!("{}/{}", &base[..last_slash], url)
+            } else {
+                format!("{}/{}", base, url)
+            }
         }
     }
 }

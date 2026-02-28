@@ -34,12 +34,14 @@ enum DisplayItemKind: Codable {
     case link(LinkItem)
     case input(InputItem)
     case button(ButtonItem)
+    case image(ImageItem)
     
     private enum CodingKeys: String, CodingKey {
         case Text
         case Link
         case Input
         case Button
+        case Image
     }
     
     init(from decoder: Decoder) throws {
@@ -54,6 +56,8 @@ enum DisplayItemKind: Codable {
             self = .input(inputData)
         } else if let buttonData = try? container.decode(ButtonItem.self, forKey: .Button) {
             self = .button(buttonData)
+        } else if let imageData = try? container.decode(ImageItem.self, forKey: .Image) {
+            self = .image(imageData)
         } else {
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(
@@ -76,6 +80,8 @@ enum DisplayItemKind: Codable {
             try container.encode(item, forKey: .Input)
         case .button(let item):
             try container.encode(item, forKey: .Button)
+        case .image(let item):
+            try container.encode(item, forKey: .Image)
         }
     }
 }
@@ -133,6 +139,14 @@ struct ButtonItem: Codable {
         case buttonType = "button_type"
         case formId = "form_id"
     }
+}
+
+/// Image display item
+struct ImageItem: Codable {
+    let src: String
+    let alt: String
+    let width: Float
+    let height: Float
 }
 
 /// A rectangle

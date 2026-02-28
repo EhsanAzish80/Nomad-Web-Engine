@@ -39,7 +39,7 @@ class NomadEngineWrapper: ObservableObject {
         isLoading = true
         error = nil
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             let result = urlString.withCString { urlPtr in
                 nomad_engine_load_url(engine, urlPtr)
             }
@@ -67,7 +67,7 @@ class NomadEngineWrapper: ObservableObject {
         isLoading = true
         error = nil
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             let result = urlString.withCString { urlPtr in
                 nomad_engine_navigate(engine, urlPtr)
             }
@@ -87,8 +87,10 @@ class NomadEngineWrapper: ObservableObject {
     /// Updates the viewport width
     func setViewportWidth(_ width: Float) {
         guard let engine = engine else { return }
-        nomad_engine_set_viewport_width(engine, width)
-        updateDisplayList()
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            nomad_engine_set_viewport_width(engine, width)
+            self?.updateDisplayList()
+        }
     }
     
     /// Ticks the engine
@@ -107,7 +109,7 @@ class NomadEngineWrapper: ObservableObject {
         isLoading = true
         error = nil
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             // Convert inputs to JSON array format: [["key", "value"], ...]
             let inputsArray = inputs.map { [$0.0, $0.1] }
             
@@ -141,12 +143,16 @@ class NomadEngineWrapper: ObservableObject {
             return
         }
         
-        let result = nomad_engine_go_back(engine)
-        
-        if result == 0 {
-            updateDisplayList()
-        } else {
-            error = "Cannot go back"
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let result = nomad_engine_go_back(engine)
+            
+            if result == 0 {
+                self?.updateDisplayList()
+            } else {
+                DispatchQueue.main.async {
+                    self?.error = "Cannot go back"
+                }
+            }
         }
     }
     
@@ -157,12 +163,16 @@ class NomadEngineWrapper: ObservableObject {
             return
         }
         
-        let result = nomad_engine_go_forward(engine)
-        
-        if result == 0 {
-            updateDisplayList()
-        } else {
-            error = "Cannot go forward"
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let result = nomad_engine_go_forward(engine)
+            
+            if result == 0 {
+                self?.updateDisplayList()
+            } else {
+                DispatchQueue.main.async {
+                    self?.error = "Cannot go forward"
+                }
+            }
         }
     }
     

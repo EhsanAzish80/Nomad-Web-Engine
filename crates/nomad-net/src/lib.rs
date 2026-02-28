@@ -9,6 +9,9 @@ use thiserror::Error;
 /// Maximum size of HTTP response (10 MB)
 pub const MAX_RESPONSE_SIZE: usize = 10 * 1024 * 1024;
 
+/// Maximum size of image files (5 MB)
+pub const MAX_IMAGE_SIZE: usize = 5 * 1024 * 1024;
+
 /// Default timeout for HTTP requests (30 seconds)
 pub const DEFAULT_TIMEOUT_SECS: u64 = 30;
 
@@ -29,6 +32,9 @@ pub enum NetworkError {
 
     #[error("Too many redirects")]
     MaxRedirects,
+
+    #[error("Image decode error: {0}")]
+    ImageDecode(String),
 }
 
 /// Response from a network fetch.
@@ -39,6 +45,18 @@ pub struct FetchResponse {
     pub body: String,
     /// HTTP status code.
     pub status: u16,
+}
+
+/// Image data from a fetch operation.
+pub struct ImageData {
+    /// The final URL after redirects.
+    pub url: String,
+    /// Image width in pixels
+    pub width: u32,
+    /// Image height in pixels
+    pub height: u32,
+    /// RGBA pixel data (4 bytes per pixel)
+    pub rgba_data: Vec<u8>,
 }
 
 /// Network layer for fetching resources.
@@ -199,6 +217,83 @@ impl NetworkLayer {
             url: final_url,
             body,
             status,
+        })
+    }
+
+    /// Fetches an image from a URL and decodes it to RGBA format.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The URL of the image to fetch
+    ///
+    /// # Returns
+    ///
+    /// An `ImageData` containing the decoded image in RGBA format.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The URL is invalid
+    /// - The request times out
+    /// - The image is too large
+    /// - The image cannot be decoded
+    pub fn fetch_image(&self, url: &str) -> Result<ImageData, NetworkError> {
+        // Validate URL
+        let parsed_url =
+            reqwest::Url::parse(url).map_err(|e| NetworkError::InvalidUrl(e.to_string()))?;
+
+        // Only allow HTTP and HTTPS
+        if parsed_url.scheme() != "http" && parsed_url.scheme() != "https" {
+            return Err(NetworkError::InvalidUrl(format!(
+                "Unsupported scheme: {}",
+                parsed_url.scheme()
+            )));
+        }
+
+        // Send request
+        let response = self
+            .client
+            .get(url)
+            .send()
+            .map_err(|e| {
+                if e.is_timeout() {
+                    NetworkError::Timeout(self.timeout.as_secs())
+                } else {
+                    NetworkError::RequestFailed(e.to_string())
+                }
+            })?;
+
+        let final_url = response.url().to_string();
+
+        // Check content length if available
+        if let Some(content_length) = response.content_length() {
+            if content_length as usize > MAX_IMAGE_SIZE {
+                return Err(NetworkError::ResponseTooLarge);
+            }
+        }
+
+        // Read bytes with size limit
+        let bytes = response
+            .bytes()
+            .map_err(|e| NetworkError::RequestFailed(e.to_string()))?;
+
+        if bytes.len() > MAX_IMAGE_SIZE {
+            return Err(NetworkError::ResponseTooLarge);
+        }
+
+        // Decode image
+        let img = image::load_from_memory(&bytes)
+            .map_err(|e| NetworkError::ImageDecode(e.to_string()))?;
+
+        // Convert to RGBA8
+        let rgba_img = img.to_rgba8();
+        let (width, height) = rgba_img.dimensions();
+
+        Ok(ImageData {
+            url: final_url,
+            width,
+            height,
+            rgba_data: rgba_img.into_raw(),
         })
     }
 }

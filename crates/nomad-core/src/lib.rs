@@ -96,7 +96,8 @@ struct NavigationController {
     current_index: usize,
     /// Maximum history entries to keep
     max_history: usize,
-    /// Maximum number of redirects to follow
+    /// Maximum number of redirects to follow (used by SecurityPolicy)
+    #[allow(dead_code)]
     max_redirects: usize,
 }
 
@@ -175,6 +176,13 @@ impl NavigationController {
 }
 
 /// Security policy enforcer for browser safety
+/// 
+/// Note: These policies are enforced by design:
+/// - No cookies: NetworkLayer doesn't send Cookie headers
+/// - No localStorage: Not implemented
+/// - No third-party requests: Checked in CSS loading
+/// - Redirect limits: Handled by NetworkLayer's redirect following
+#[allow(dead_code)]
 struct SecurityPolicy {
     /// No cookies are stored or sent
     allows_cookies: bool,
@@ -197,6 +205,7 @@ impl SecurityPolicy {
     }
 
     /// Validates that we haven't exceeded redirect limits
+    #[allow(dead_code)]
     fn check_redirect_limit(&self, count: usize) -> Result<(), EngineError> {
         if count >= self.max_redirects {
             Err(EngineError::Network(NetworkError::MaxRedirects))
@@ -216,6 +225,8 @@ pub struct Engine {
     current_display_list: Option<DisplayList>,
     current_forms: Vec<FormMetadata>,
     navigation: NavigationController,
+    /// Security policy - policies enforced by design, not runtime checks
+    #[allow(dead_code)]
     security_policy: SecurityPolicy,
 }
 
@@ -416,7 +427,8 @@ impl Engine {
             )?;
 
             // Create render engine and generate display list
-            let render_engine = RenderEngine::new(self.config.viewport_width);
+            let base_url = self.navigation.base_url().cloned();
+            let render_engine = RenderEngine::with_base_url(self.config.viewport_width, base_url);
             let display_list = render_engine.render(&layout_box)?;
 
             self.current_display_list = Some(display_list);

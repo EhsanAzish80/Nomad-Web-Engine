@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CSS Centering Test - Nomad Browser</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        
+        /* Test 1: text-align center (we support this) */
+        .centered-text {
+            text-align: center;
+        }
+        
+        /* Test 2: margin auto for centering blocks (we DON'T support this yet) */
+        .centered-image {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Test 3: flexbox centering (we support basic flexbox but not justify-content) */
+        .flex-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            border: 1px solid #ccc;
+        }
+        
+        /* Test 4: absolute positioning (we DON'T support this) */
+        .absolute-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+    <h1>CSS Centering Tests</h1>
+    
+    <hr>
+    
+    <h2>Test 1: text-align: center (WORKS)</h2>
+    <div class="centered-text">
+        <p>This text should be centered</p>
+        <p>Every line should be in the middle</p>
+    </div>
+    
+    <hr>
+    
+    <h2>Test 2: margin: auto (DOESN'T WORK YET)</h2>
+    <img src="https://via.placeholder.com/200x100" 
+         alt="Placeholder" 
+         class="centered-image">
+    <p style="text-align: center;">Image above should be centered with margin: auto</p>
+    
+    <hr>
+    
+    <h2>Test 3: flexbox justify-content (DOESN'T WORK YET)</h2>
+    <div class="flex-center">
+        <img src="https://via.placeholder.com/100" alt="Placeholder">
+    </div>
+    <p style="text-align: center;">Image above should be centered with flexbox</p>
+    
+    <hr>
+    
+    <h2>Google's Approach</h2>
+    <p>Google uses a combination of:</p>
+    <ul>
+        <li><strong>margin: 0 auto</strong> - to center the search container</li>
+        <li><strong>text-align: center</strong> - to center inline elements</li>
+        <li><strong>position: absolute</strong> - for some elements</li>
+    </ul>
+    
+    <p><strong>What we need to implement:</strong></p>
+    <ol>
+        <li>margin-left, margin-right, margin-top, margin-bottom properties</li>
+        <li>CSS "auto" value for margins</li>
+        <li>justify-content and align-items for flexbox</li>
+        <li>position: absolute/relative/fixed (Phase 7 goal)</li>
+    </ol>
+</body>
+</html>
