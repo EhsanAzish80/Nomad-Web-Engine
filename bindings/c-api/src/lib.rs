@@ -96,8 +96,10 @@ pub unsafe extern "C" fn nomad_engine_load_url(
 /// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
 #[no_mangle]
 pub unsafe extern "C" fn nomad_engine_tick(engine: *mut NomadEngine) {
+    // Tick is currently a no-op in Phase 4
+    // Future: Animation updates, async task polling, etc.
     if !engine.is_null() {
-        (*engine).engine.tick();
+        // Nothing to do for now
     }
 }
 

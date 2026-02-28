@@ -1,17 +1,18 @@
 //! Core functionality for the Nomad Web Engine.
 //!
-//! This crate provides foundational types and utilities used across
-//! the entire web engine.
+//! This crate orchestrates all components: networking, HTML parsing,
+//! CSS styling, layout computation, and rendering.
 
 use nomad_html::{DomTree, HtmlError, HtmlParser};
 use nomad_net::{NetworkError, NetworkLayer};
+use nomad_style::StyleSheet;
+use nomad_layout::{LayoutEngine, LayoutError};
+use nomad_render::{RenderEngine, DisplayList, RenderError};
+use markup5ever_rcdom::{Handle, NodeData};
 use thiserror::Error;
 
-pub mod display_list;
-pub mod layout;
-
-pub use display_list::{DisplayItem, DisplayItemKind, DisplayList, Rect};
-pub use layout::{layout_dom, LayoutConfig};
+// Re-export commonly used types
+pub use nomad_render::{DisplayList as ExportedDisplayList, DisplayItem, DisplayItemKind, Rect};
 
 /// Errors that can occur during engine operations.
 #[derive(Error, Debug)]
@@ -21,6 +22,12 @@ pub enum EngineError {
 
     #[error("HTML parsing error: {0}")]
     Html(#[from] HtmlError),
+
+    #[error("Layout error: {0}")]
+    Layout(#[from] LayoutError),
+
+    #[error("Render error: {0}")]
+    Render(#[from] RenderError),
 
     #[error("Engine not initialized")]
     NotInitialized,
@@ -40,6 +47,10 @@ pub struct EngineConfig {
     pub max_dom_nodes: usize,
     /// Network timeout in seconds
     pub timeout_secs: u64,
+    /// Viewport width
+    pub viewport_width: f32,
+    /// Viewport height
+    pub viewport_height: f32,
 }
 
 impl Default for EngineConfig {
@@ -48,6 +59,8 @@ impl Default for EngineConfig {
             max_html_size: nomad_net::MAX_RESPONSE_SIZE,
             max_dom_nodes: nomad_html::MAX_DOM_NODES,
             timeout_secs: nomad_net::DEFAULT_TIMEOUT_SECS,
+            viewport_width: 800.0,
+            viewport_height: 600.0,
         }
     }
 }
@@ -57,8 +70,8 @@ pub struct Engine {
     network: NetworkLayer,
     html_parser: HtmlParser,
     config: EngineConfig,
-    layout_config: LayoutConfig,
     current_dom: Option<DomTree>,
+    current_stylesheet: StyleSheet,
     current_display_list: Option<DisplayList>,
 }
 
@@ -77,19 +90,20 @@ impl Engine {
             network,
             html_parser,
             config,
-            layout_config: LayoutConfig::default(),
             current_dom: None,
+            current_stylesheet: StyleSheet::new(),
             current_display_list: None,
         })
     }
 
-    /// Loads a URL and returns the extracted text content.
+    /// Loads a URL and processes it through the full pipeline.
     ///
     /// This method:
     /// 1. Fetches the HTML from the URL
     /// 2. Parses it into a DOM tree
-    /// 3. Extracts visible text nodes
-    /// 4. Returns the cleaned text
+    /// 3. Extracts CSS from <style> tags
+    /// 4. Computes layout with flexbox support
+    /// 5. Generates a display list for rendering
     ///
     /// # Arguments
     ///
@@ -104,6 +118,7 @@ impl Engine {
     /// Returns an error if:
     /// - The network request fails
     /// - HTML parsing fails
+    /// - Layout computation fails
     /// - Resource limits are exceeded
     pub fn load_url(&mut self, url: &str) -> Result<String, EngineError> {
         // Fetch HTML
@@ -112,21 +127,40 @@ impl Engine {
         // Parse HTML into DOM
         let dom = self.html_parser.parse(&response.body)?;
 
-        // Store the DOM
+        // Extract text for return value
         let text = dom.extract_text();
+
+        // Extract CSS from <style> tags
+        let css = extract_css_from_dom(dom.document());
+        self.current_stylesheet = StyleSheet::parse(&css);
+
+        // Store the DOM
         self.current_dom = Some(dom);
 
-        // Generate initial display list
+        // Generate display list
         self.regenerate_display_list()?;
 
-        // Extract and return text
         Ok(text)
     }
 
-    /// Regenerates the display list from the current DOM.
+    /// Regenerates the display list from the current DOM and styles.
     pub fn regenerate_display_list(&mut self) -> Result<(), EngineError> {
         if let Some(ref dom) = self.current_dom {
-            let display_list = layout_dom(dom.document(), self.layout_config.clone());
+            // Create layout engine
+            let mut layout_engine = LayoutEngine::new();
+
+            // Compute layout
+            let layout_box = layout_engine.compute_layout(
+                dom.document(),
+                &self.current_stylesheet,
+                self.config.viewport_width,
+                self.config.viewport_height,
+            )?;
+
+            // Create render engine and generate display list
+            let render_engine = RenderEngine::new(self.config.viewport_width);
+            let display_list = render_engine.render(&layout_box)?;
+
             self.current_display_list = Some(display_list);
             Ok(())
         } else {
@@ -137,9 +171,7 @@ impl Engine {
     /// Returns the current display list as bytes.
     pub fn get_display_list_bytes(&self) -> Result<Vec<u8>, EngineError> {
         if let Some(ref display_list) = self.current_display_list {
-            display_list
-                .to_bytes()
-                .map_err(EngineError::Serialization)
+            Ok(display_list.to_bytes()?)
         } else {
             Err(EngineError::NoContent)
         }
@@ -150,17 +182,18 @@ impl Engine {
         self.current_display_list.as_ref()
     }
 
-    /// Ticks the engine (for future animation/updates).
-    pub fn tick(&mut self) {
-        // Placeholder for future updates
+    /// Sets the viewport dimensions and regenerates layout.
+    pub fn set_viewport_size(&mut self, width: f32, height: f32) {
+        self.config.viewport_width = width;
+        self.config.viewport_height = height;
+        
+        // Regenerate layout if we have content
+        let _ = self.regenerate_display_list();
     }
 
     /// Sets the viewport width for layout.
     pub fn set_viewport_width(&mut self, width: f32) {
-        self.layout_config.viewport_width = width;
-        self.layout_config.max_line_width = width - self.layout_config.padding_left - self.layout_config.padding_right;
-        // Regenerate layout if we have content
-        let _ = self.regenerate_display_list();
+        self.set_viewport_size(width, self.config.viewport_height);
     }
 
     /// Loads a URL and prints the extracted text to stdout.
@@ -192,29 +225,40 @@ impl Default for Engine {
     }
 }
 
-/// Legacy core placeholder struct (kept for backward compatibility).
-#[deprecated(since = "0.1.0", note = "Use Engine instead")]
-pub struct NomadCore {
-    initialized: bool,
+/// Extract CSS content from <style> tags in the DOM.
+fn extract_css_from_dom(handle: &Handle) -> String {
+    let mut css = String::new();
+    extract_css_recursive(handle, &mut css);
+    css
 }
 
-#[allow(deprecated)]
-impl NomadCore {
-    /// Creates a new instance of the core engine.
-    pub fn new() -> Self {
-        Self { initialized: true }
-    }
-
-    /// Returns whether the core is initialized.
-    pub fn is_initialized(&self) -> bool {
-        self.initialized
-    }
-}
-
-#[allow(deprecated)]
-impl Default for NomadCore {
-    fn default() -> Self {
-        Self::new()
+/// Recursively extract CSS from <style> tags.
+fn extract_css_recursive(handle: &Handle, css: &mut String) {
+    match &handle.data {
+        NodeData::Element { ref name, .. } => {
+            let tag_name = name.local.as_ref();
+            
+            if tag_name == "style" {
+                // Extract text content from this style tag
+                for child in handle.children.borrow().iter() {
+                    if let NodeData::Text { ref contents } = child.data {
+                        css.push_str(&contents.borrow().to_string());
+                        css.push('\n');
+                    }
+                }
+            } else {
+                // Continue searching in children
+                for child in handle.children.borrow().iter() {
+                    extract_css_recursive(child, css);
+                }
+            }
+        }
+        _ => {
+            // For non-element nodes, search children
+            for child in handle.children.borrow().iter() {
+                extract_css_recursive(child, css);
+            }
+        }
     }
 }
 
@@ -234,6 +278,8 @@ mod tests {
             max_html_size: 1024 * 1024,
             max_dom_nodes: 50_000,
             timeout_secs: 15,
+            viewport_width: 1024.0,
+            viewport_height: 768.0,
         };
         let engine = Engine::with_config(config);
         assert!(engine.is_ok());
@@ -245,12 +291,24 @@ mod tests {
         assert_eq!(config.max_html_size, nomad_net::MAX_RESPONSE_SIZE);
         assert_eq!(config.max_dom_nodes, nomad_html::MAX_DOM_NODES);
         assert_eq!(config.timeout_secs, nomad_net::DEFAULT_TIMEOUT_SECS);
+        assert_eq!(config.viewport_width, 800.0);
+        assert_eq!(config.viewport_height, 600.0);
     }
 
     #[test]
-    #[allow(deprecated)]
-    fn test_legacy_core() {
-        let core = NomadCore::new();
-        assert!(core.is_initialized());
+    fn test_css_extraction() {
+        // Create a simple DOM for testing
+        use markup5ever_rcdom::{Node, NodeData};
+        use std::rc::Rc;
+        use std::cell::{RefCell, Cell};
+
+        let node = Rc::new(Node {
+            parent: Cell::new(None),
+            children: RefCell::new(vec![]),
+            data: NodeData::Document,
+        });
+
+        let css = extract_css_from_dom(&node);
+        assert_eq!(css, "");
     }
 }

@@ -8,3 +8,6 @@ authors.workspace = true
 
 [dependencies]
 nomad-style = { path = "../nomad-style" }
+markup5ever_rcdom = "0.2"
+taffy = "0.5"
+thiserror = "1.0"
