@@ -231,45 +231,136 @@ impl StyleSheet {
         let mut style = parent_style.cloned().unwrap_or_default();
 
         // Extract element info
-        let (tag_name, classes, id) = match &node.data {
-            NodeData::Element { ref name, ref attrs, .. } => {
-                let tag = name.local.as_ref().to_lowercase();
-                let mut classes = Vec::new();
-                let mut id = None;
-
-                for attr in attrs.borrow().iter() {
-                    match attr.name.local.as_ref() {
-                        "class" => {
-                            classes = attr.value.split_whitespace().map(|s| s.to_string()).collect();
-                        }
-                        "id" => {
-                            id = Some(attr.value.to_string());
-                        }
-                        _ => {}
-                    }
-                }
-
-                (Some(tag), classes, id)
-            }
-            _ => (None, Vec::new(), None),
-        };
+        let (tag_name, classes, id) = extract_element_info(node);
 
         // Apply matching rules (in order, later rules override earlier)
         for rule in &self.rules {
-            let matches = match &rule.selector {
-                SimpleSelector::Universal => true,
-                SimpleSelector::Tag(tag) => tag_name.as_ref() == Some(tag),
-                SimpleSelector::Class(class) => classes.contains(class),
-                SimpleSelector::Id(rule_id) => id.as_ref() == Some(rule_id),
-            };
-
-            if matches {
+            if matches_selector(&rule.selector, node, &tag_name, &classes, &id) {
                 apply_declarations(&mut style, &rule.declarations);
             }
         }
 
         style
     }
+}
+
+/// Extract tag, classes, and id from a node.
+fn extract_element_info(node: &Handle) -> (Option<String>, Vec<String>, Option<String>) {
+    match &node.data {
+        NodeData::Element { ref name, ref attrs, .. } => {
+            let tag = name.local.as_ref().to_lowercase();
+            let mut classes = Vec::new();
+            let mut id = None;
+
+            for attr in attrs.borrow().iter() {
+                match attr.name.local.as_ref() {
+                    "class" => {
+                        classes = attr.value.split_whitespace().map(|s| s.to_string()).collect();
+                    }
+                    "id" => {
+                        id = Some(attr.value.to_string());
+                    }
+                    _ => {}
+                }
+            }
+
+            (Some(tag), classes, id)
+        }
+        _ => (None, Vec::new(), None),
+    }
+}
+
+/// Check if a selector matches a node.
+fn matches_selector(
+    selector: &Selector,
+    node: &Handle,
+    tag_name: &Option<String>,
+    classes: &[String],
+    id: &Option<String>,
+) -> bool {
+    match selector {
+        Selector::Simple(simple) => matches_simple(simple, tag_name, classes, id),
+        Selector::Descendant(parts) => {
+            // For descendant selectors, check from right to left
+            // The rightmost selector must match the current node
+            if parts.is_empty() {
+                return false;
+            }
+
+            let target = &parts[parts.len() - 1];
+            if !matches_simple(target, tag_name, classes, id) {
+                return false;
+            }
+
+            // If only one part, it's actually a simple selector
+            if parts.len() == 1 {
+                return true;
+            }
+
+            // Check ancestors for remaining selectors (right to left)
+            matches_ancestors(node, &parts[..parts.len() - 1])
+        }
+    }
+}
+
+/// Check if a simple selector matches the element info.
+fn matches_simple(
+    selector: &SimpleSelector,
+    tag_name: &Option<String>,
+    classes: &[String],
+    id: &Option<String>,
+) -> bool {
+    match selector {
+        SimpleSelector::Universal => true,
+        SimpleSelector::Tag(tag) => tag_name.as_ref() == Some(tag),
+        SimpleSelector::Class(class) => classes.contains(class),
+        SimpleSelector::Id(rule_id) => id.as_ref() == Some(rule_id),
+    }
+}
+
+/// Check if ancestors match the selector parts (from right to left).
+/// Example: for "div p span", when checking "span", this checks if ancestors contain "p" with "div" ancestor.
+fn matches_ancestors(node: &Handle, parts: &[SimpleSelector]) -> bool {
+    if parts.is_empty() {
+        return true;
+    }
+
+    // Walk up the ancestor chain
+    let mut current = node.parent.take();
+    
+    // Find the next selector match in ancestors
+    let target = &parts[parts.len() - 1];
+    let remaining = &parts[..parts.len() - 1];
+    
+    while let Some(parent_weak) = current {
+        if let Some(parent) = parent_weak.upgrade() {
+            let (tag, classes, id) = extract_element_info(&parent);
+            
+            if matches_simple(target, &tag, &classes, &id) {
+                // Found a match for this selector
+                // Continue checking remaining selectors up the ancestor chain
+                if remaining.is_empty() {
+                    // Restore parent reference
+                    node.parent.set(Some(parent_weak));
+                    return true;
+                }
+                
+                // Recursively check remaining ancestors
+                let result = matches_ancestors(&parent, remaining);
+                node.parent.set(Some(parent_weak));
+                return result;
+            }
+            
+            // Continue searching up the tree
+            current = parent.parent.take();
+        } else {
+            break;
+        }
+    }
+    
+    // Restore parent reference
+    node.parent.set(current);
+    false
 }
 
 /// Parse a single CSS rule.
