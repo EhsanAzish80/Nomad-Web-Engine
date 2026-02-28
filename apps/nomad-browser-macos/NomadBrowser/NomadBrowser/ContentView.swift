@@ -54,6 +54,9 @@ struct ContentView: View {
                         onLinkClick: { url in
                             urlText = url
                             loadURL()
+                        },
+                        onFormSubmit: { inputs in
+                            engine.submitForm(formIndex: 0, inputs: inputs)
                         }
                     )
                     .frame(width: viewportWidth, height: CGFloat(displayList.height))

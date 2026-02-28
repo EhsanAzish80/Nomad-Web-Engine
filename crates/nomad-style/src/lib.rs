@@ -2,7 +2,7 @@
 //!
 //! Handles CSS parsing, cascade resolution, and computed styles.
 //! 
-//! SCOPE: CSS-lite - only essential properties for Phase 4.
+//! SCOPE: CSS-lite - only essential properties for Phase 5.
 //! - No animations, transitions, calc(), variables
 //! - No grid, no complex selectors, no pseudo-classes
 //! - Silent ignoring of unsupported properties
@@ -10,6 +10,12 @@
 use cssparser::{Parser, ParserInput, Token, ParseError};
 use markup5ever_rcdom::{Handle, NodeData};
 use thiserror::Error;
+
+/// Safety limits for CSS.
+pub const MAX_CSS_RULES: usize = 10_000;
+pub const MAX_CSS_FILE_SIZE: usize = 1_048_576; // 1MB
+pub const MAX_CSS_FILES: usize = 10;
+pub const MAX_SELECTOR_DEPTH: usize = 10;
 
 /// Errors that can occur during style processing.
 #[derive(Error, Debug)]
@@ -57,6 +63,15 @@ pub enum AlignItems {
     Center,
 }
 
+/// Text alignment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TextAlign {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
 /// Edge insets (margin or padding).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct EdgeInsets {
@@ -93,6 +108,7 @@ pub struct ComputedStyle {
     pub flex_direction: FlexDirection,
     pub justify_content: JustifyContent,
     pub align_items: AlignItems,
+    pub text_align: TextAlign,
 }
 
 impl Default for ComputedStyle {
@@ -107,6 +123,7 @@ impl Default for ComputedStyle {
             flex_direction: FlexDirection::Row,
             justify_content: JustifyContent::FlexStart,
             align_items: AlignItems::Stretch,
+            text_align: TextAlign::Left,
         }
     }
 }
@@ -120,10 +137,35 @@ pub enum SimpleSelector {
     Universal,
 }
 
-/// A CSS rule with a simple selector and declarations.
+/// Selector can be simple or compound (descendant combinator).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Selector {
+    Simple(SimpleSelector),
+    Descendant(Vec<SimpleSelector>), // e.g., "div p" = [Tag("div"), Tag("p")]
+}
+
+impl Selector {
+    /// Get the rightmost (target) selector for specificity.
+    pub fn target(&self) -> &SimpleSelector {
+        match self {
+            Selector::Simple(s) => s,
+            Selector::Descendant(parts) => parts.last().unwrap(),
+        }
+    }
+    
+    /// Get depth of selector (number of parts).
+    pub fn depth(&self) -> usize {
+        match self {
+            Selector::Simple(_) => 1,
+            Selector::Descendant(parts) => parts.len(),
+        }
+    }
+}
+
+/// A CSS rule with a selector and declarations.
 #[derive(Debug, Clone)]
 pub struct Rule {
-    pub selector: SimpleSelector,
+    pub selector: Selector,
     pub declarations: Vec<Declaration>,
 }
 
@@ -141,6 +183,7 @@ pub enum PropertyValue {
     FlexDirection(FlexDirection),
     JustifyContent(JustifyContent),
     AlignItems(AlignItems),
+    TextAlign(TextAlign),
     Length(f32), // Only px for now
     Auto,
 }
@@ -231,8 +274,8 @@ impl StyleSheet {
 
 /// Parse a single CSS rule.
 fn parse_rule<'i, 't>(parser: &mut Parser<'i, 't>) -> Result<Rule, ParseError<'i, ()>> {
-    // Parse selector
-    let selector = parse_simple_selector(parser)?;
+    // Parse selector (simple or descendant)
+    let selector = parse_selector(parser)?;
 
     // Expect '{'
     parser.expect_curly_bracket_block()?;
@@ -264,6 +307,52 @@ fn parse_rule<'i, 't>(parser: &mut Parser<'i, 't>) -> Result<Rule, ParseError<'i
         selector,
         declarations,
     })
+}
+
+/// Parse a selector (simple or descendant combinator).
+fn parse_selector<'i, 't>(parser: &mut Parser<'i, 't>) -> Result<Selector, ParseError<'i, ()>> {
+    let mut parts = Vec::new();
+    
+    // Parse first simple selector
+    parts.push(parse_simple_selector(parser)?);
+    
+    // Check for descendant combinator (whitespace followed by another selector)
+    loop {
+        let _ = parser.skip_whitespace();
+        
+        // Peek ahead to see if there's another selector part
+        let has_more = parser.try_parse(|p| {
+            // Check if next token could start a selector
+            let token = p.next()?;
+            match token {
+                Token::Ident(_) | Token::Delim('.') | Token::IDHash(_) | Token::Delim('*') => Ok(()),
+                _ => Err(p.new_unexpected_token_error(token.clone())),
+            }
+        }).is_ok();
+        
+        if !has_more {
+            break;
+        }
+        
+        // Parse next part
+        if let Ok(part) = parse_simple_selector(parser) {
+            parts.push(part);
+            
+            // Enforce max selector depth
+            if parts.len() > MAX_SELECTOR_DEPTH {
+                return Err(parser.new_custom_error(()));
+            }
+        } else {
+            break;
+        }
+    }
+    
+    // Return simple or descendant selector
+    if parts.len() == 1 {
+        Ok(Selector::Simple(parts.into_iter().next().unwrap()))
+    } else {
+        Ok(Selector::Descendant(parts))
+    }
 }
 
 /// Parse a simple selector (tag, .class, or #id).
@@ -354,6 +443,16 @@ fn parse_property_value<'i, 't>(parser: &mut Parser<'i, 't>, property: &str) -> 
             };
             Ok(PropertyValue::AlignItems(align))
         }
+        "text-align" => {
+            let ident = parser.expect_ident()?.to_string().to_lowercase();
+            let align = match ident.as_str() {
+                "left" => TextAlign::Left,
+                "center" => TextAlign::Center,
+                "right" => TextAlign::Right,
+                _ => return Err(parser.new_custom_error(())),
+            };
+            Ok(PropertyValue::TextAlign(align))
+        }
         "margin" | "padding" | "width" | "height" | "font-size" |
         "margin-top" | "margin-right" | "margin-bottom" | "margin-left" |
         "padding-top" | "padding-right" | "padding-bottom" | "padding-left" => {
@@ -412,6 +511,11 @@ fn apply_declarations(style: &mut ComputedStyle, declarations: &[Declaration]) {
             "align-items" => {
                 if let PropertyValue::AlignItems(a) = decl.value {
                     style.align_items = a;
+                }
+            }
+            "text-align" => {
+                if let PropertyValue::TextAlign(a) = decl.value {
+                    style.text_align = a;
                 }
             }
             "margin" => {

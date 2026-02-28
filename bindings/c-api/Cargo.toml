@@ -17,3 +17,4 @@ nomad-style = { path = "../../crates/nomad-style" }
 nomad-layout = { path = "../../crates/nomad-layout" }
 nomad-js = { path = "../../crates/nomad-js" }
 nomad-render = { path = "../../crates/nomad-render" }
+serde_json = "1.0"

@@ -8,69 +8,74 @@
 import SwiftUI
 import AppKit
 
-struct RenderView: NSViewRepresentable {
+struct RenderView: View {
     let displayList: DisplayList
     let onLinkClick: (String) -> Void
+    let onFormSubmit: ([(String, String)]) -> Void
+    @State private var inputValues: [String: String] = [:]
     
-    func makeNSView(context: Context) -> RenderNSView {
-        let view = RenderNSView()
-        view.onLinkClick = onLinkClick
-        return view
-    }
-    
-    func updateNSView(_ nsView: RenderNSView, context: Context) {
-        nsView.displayList = displayList
-        nsView.needsDisplay = true
-    }
-}
-
-class RenderNSView: NSView {
-    var displayList: DisplayList?
-    var onLinkClick: ((String) -> Void)?
-    
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        setupTracking()
-    }
-    
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
-        setupTracking()
-    }
-    
-    private func setupTracking() {
-        // Add tracking area for mouse events
-        let trackingArea = NSTrackingArea(
-            rect: bounds,
-            options: [.activeInKeyWindow, .inVisibleRect, .mouseMoved],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(trackingArea)
-    }
-    
-    override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        
-        guard let context = NSGraphicsContext.current?.cgContext,
-              let displayList = displayList else {
-            return
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Canvas for text rendering
+            Canvas { context, size in
+                for item in displayList.items {
+                    if case .text(let textItem) = item.kind {
+                        drawText(textItem, bounds: item.bounds, in: &context)
+                    }
+                }
+            }
+            .background(Color.white)
+            
+            // Overlay interactive elements
+            ForEach(displayList.items.indices, id: \.self) { index in
+                let item = displayList.items[index]
+                
+                switch item.kind {
+                case .input(let inputItem):
+                    TextField(inputItem.value.isEmpty ? "Enter \(inputItem.name)" : inputItem.value,
+                              text: Binding(
+                                get: { inputValues[inputItem.name] ?? inputItem.value },
+                                set: { inputValues[inputItem.name] = $0 }
+                              ))
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: CGFloat(item.bounds.width - 4), height: CGFloat(item.bounds.height - 4))
+                    .position(x: CGFloat(item.bounds.x + item.bounds.width / 2),
+                             y: CGFloat(item.bounds.y + item.bounds.height / 2))
+                    
+                case .button(let buttonItem):
+                    Button(buttonItem.label) {
+                        handleButtonClick(buttonItem)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(width: CGFloat(item.bounds.width - 4), height: CGFloat(item.bounds.height - 4))
+                    .position(x: CGFloat(item.bounds.x + item.bounds.width / 2),
+                             y: CGFloat(item.bounds.y + item.bounds.height / 2))
+                    
+                case .text(let textItem):
+                    if textItem.isLink, let url = textItem.linkUrl {
+                        Button("") {
+                            onLinkClick(url)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: CGFloat(item.bounds.width), height: CGFloat(item.bounds.height))
+                        .position(x: CGFloat(item.bounds.x + item.bounds.width / 2),
+                                 y: CGFloat(item.bounds.y + item.bounds.height / 2))
+                        .opacity(0.0) // Invisible button over text for click handling
+                    }
+                }
+            }
         }
-        
-        // Fill background
-        context.setFillColor(NSColor.white.cgColor)
-        context.fill(bounds)
-        
-        // Draw all items
-        for item in displayList.items {
-            switch item.kind {
-            case .text(let textItem):
-                drawText(textItem, bounds: item.bounds, in: context)
+        .onAppear {
+            // Initialize input values from display list
+            for item in displayList.items {
+                if case .input(let inputItem) = item.kind {
+                    inputValues[inputItem.name] = inputItem.value
+                }
             }
         }
     }
     
-    private func drawText(_ textItem: TextItem, bounds: Rect, in context: CGContext) {
+    private func drawText(_ textItem: TextItem, bounds: Rect, in context: inout GraphicsContext) {
         let rect = CGRect(
             x: CGFloat(bounds.x),
             y: CGFloat(bounds.y),
@@ -78,45 +83,23 @@ class RenderNSView: NSView {
             height: CGFloat(bounds.height)
         )
         
-        // Set text color
-        let textColor = textItem.isLink ? NSColor.blue : NSColor.black
+        let textColor = textItem.isLink ? Color.blue : Color.black
         
-        // Create attributed string
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: CGFloat(textItem.fontSize)),
-            .foregroundColor: textColor,
-            .underlineStyle: textItem.isLink ? NSUnderlineStyle.single.rawValue : 0
-        ]
-        
-        let attributedString = NSAttributedString(
-            string: textItem.content,
-            attributes: attributes
-        )
-        
-        // Draw text
-        attributedString.draw(at: rect.origin)
-    }
-    
-    override func mouseDown(with event: NSEvent) {
-        guard let displayList = displayList else { return }
-        
-        let location = convert(event.locationInWindow, from: nil)
-        let flippedY = bounds.height - location.y // Flip Y coordinate
-        
-        // Check if click hits a link
-        for item in displayList.items {
-            if case .text(let textItem) = item.kind,
-               textItem.isLink,
-               let url = textItem.linkUrl,
-               item.bounds.contains(x: Float(location.x), y: Float(flippedY)) {
-                
-                onLinkClick?(url)
-                return
-            }
+        var attributedString = AttributedString(textItem.content)
+        attributedString.font = .system(size: CGFloat(textItem.fontSize))
+        attributedString.foregroundColor = textColor
+        if textItem.isLink {
+            attributedString.underlineStyle = .single
         }
+        
+        context.draw(Text(attributedString), at: rect.origin, anchor: .topLeading)
     }
     
-    override var isFlipped: Bool {
-        return true // Use top-left origin like web coordinates
+    private func handleButtonClick(_ button: ButtonItem) {
+        if button.buttonType == "submit" {
+            // Collect all input values and submit form
+            let inputs = inputValues.map { (key, value) in (key, value) }
+            onFormSubmit(inputs)
+        }
     }
 }

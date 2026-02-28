@@ -55,6 +55,16 @@ pub enum LayoutContent {
         is_link: bool,
         link_url: Option<String>,
     },
+    Input {
+        name: String,
+        value: String,
+        input_type: String,
+    },
+    Button {
+        label: String,
+        button_type: String,
+        form_id: Option<String>,
+    },
     Anonymous, // For containers without specific content
 }
 
@@ -291,39 +301,138 @@ impl LayoutEngine {
             }
             NodeData::Element { ref name, ref attrs, .. } => {
                 let tag_name = name.local.as_ref().to_string();
-                let is_link = tag_name == "a";
-                let mut link_url = None;
+                
+                // Helper to get attribute value
+                let get_attr = |attr_name: &str| -> Option<String> {
+                    attrs.borrow().iter()
+                        .find(|a| a.name.local.as_ref() == attr_name)
+                        .map(|a| a.value.to_string())
+                };
 
-                if is_link {
-                    for attr in attrs.borrow().iter() {
-                        if attr.name.local.as_ref() == "href" {
-                            link_url = Some(attr.value.to_string());
-                            break;
-                        }
+                // Handle input elements
+                if tag_name == "input" {
+                    let name = get_attr("name").unwrap_or_default();
+                    let value = get_attr("value").unwrap_or_default();
+                    let input_type = get_attr("type").unwrap_or_else(|| "text".to_string());
+                    
+                    LayoutContent::Input {
+                        name,
+                        value,
+                        input_type,
                     }
                 }
-
-                LayoutContent::Element {
-                    tag_name,
-                    is_link,
-                    link_url,
+                // Handle button elements
+                else if tag_name == "button" {
+                    let button_type = get_attr("type").unwrap_or_else(|| "button".to_string());
+                    let form_id = get_attr("form");
+                    
+                    // Extract text content for label
+                    let label = extract_text_content(dom_node);
+                    
+                    LayoutContent::Button {
+                        label,
+                        button_type,
+                        form_id,
+                    }
+                }
+                // Handle input type="submit" as button
+                else if tag_name == "input" && get_attr("type").as_deref() == Some("submit") {
+                    let label = get_attr("value").unwrap_or_else(|| "Submit".to_string());
+                    let form_id = get_attr("form");
+                    
+                    LayoutContent::Button {
+                        label,
+                        button_type: "submit".to_string(),
+                        form_id,
+                    }
+                }
+                // Handle anchor links
+                else if tag_name == "a" {
+                    let link_url = get_attr("href");
+                    
+                    LayoutContent::Element {
+                        tag_name,
+                        is_link: true,
+                        link_url,
+                    }
+                }
+                // Default element handling
+                else {
+                    LayoutContent::Element {
+                        tag_name,
+                        is_link: false,
+                        link_url: None,
+                    }
                 }
             }
             _ => LayoutContent::Anonymous,
         };
 
-        // Extract children layouts
+        // Extract children layouts - must match the same filtering logic as build_taffy_tree
         let mut children = Vec::new();
         let taffy_children = self.taffy.children(taffy_node)
             .map_err(|e| LayoutError::TaffyError(format!("{:?}", e)))?;
 
-        let dom_children: Vec<Handle> = dom_node.children.borrow().iter().cloned().collect();
+        let mut taffy_child_idx = 0;
         
-        // Match taffy children with DOM children (simple matching for now)
-        for (i, taffy_child) in taffy_children.iter().enumerate() {
-            if i < dom_children.len() {
-                let child_layout = self.extract_layout(*taffy_child, &dom_children[i], stylesheet, Some(&style))?;
-                children.push(child_layout);
+        // Iterate through DOM children using the same logic as build_taffy_tree
+        for child in dom_node.children.borrow().iter() {
+            if taffy_child_idx >= taffy_children.len() {
+                break;
+            }
+
+            match &child.data {
+                NodeData::Text { ref contents } => {
+                    let text = contents.borrow().to_string().trim().to_string();
+                    if !text.is_empty() {
+                        // This text node has a corresponding taffy node
+                        let child_layout = self.extract_layout(
+                            taffy_children[taffy_child_idx],
+                            child,
+                            stylesheet,
+                            Some(&style)
+                        )?;
+                        children.push(child_layout);
+                        taffy_child_idx += 1;
+                    }
+                }
+                NodeData::Element { ref name, .. } => {
+                    let tag_name = name.local.as_ref();
+                    
+                    // Skip invisible elements (same as build_taffy_tree)
+                    if matches!(
+                        tag_name,
+                        "script" | "style" | "noscript" | "iframe" | "head"
+                    ) {
+                        continue;
+                    }
+
+                    // This element has a corresponding taffy node
+                    let child_layout = self.extract_layout(
+                        taffy_children[taffy_child_idx],
+                        child,
+                        stylesheet,
+                        Some(&style)
+                    )?;
+                    children.push(child_layout);
+                    taffy_child_idx += 1;
+                }
+                _ => {
+                    // For other node types, process their grandchildren
+                    for grandchild in child.children.borrow().iter() {
+                        if taffy_child_idx >= taffy_children.len() {
+                            break;
+                        }
+                        let grandchild_layout = self.extract_layout(
+                            taffy_children[taffy_child_idx],
+                            grandchild,
+                            stylesheet,
+                            Some(&style)
+                        )?;
+                        children.push(grandchild_layout);
+                        taffy_child_idx += 1;
+                    }
+                }
             }
         }
 
@@ -335,6 +444,26 @@ impl LayoutEngine {
             content,
             children,
         })
+    }
+}
+
+/// Helper function to extract text content from a node and its children
+fn extract_text_content(node: &Handle) -> String {
+    let mut text = String::new();
+    extract_text_recursive(node, &mut text);
+    text.trim().to_string()
+}
+
+fn extract_text_recursive(node: &Handle, acc: &mut String) {
+    match &node.data {
+        NodeData::Text { ref contents } => {
+            acc.push_str(&contents.borrow());
+        }
+        _ => {
+            for child in node.children.borrow().iter() {
+                extract_text_recursive(child, acc);
+            }
+        }
     }
 }
 

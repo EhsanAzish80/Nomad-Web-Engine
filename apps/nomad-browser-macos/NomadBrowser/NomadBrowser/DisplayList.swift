@@ -23,16 +23,33 @@ struct DisplayItem: Codable {
 /// Type of display item
 enum DisplayItemKind: Codable {
     case text(TextItem)
+    case input(InputItem)
+    case button(ButtonItem)
     
     private enum CodingKeys: String, CodingKey {
         case Text
+        case Input
+        case Button
     }
     
     init(from decoder: Decoder) throws {
         // Rust serializes enums as {"VariantName": {fields}}
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let textData = try container.decode(TextItem.self, forKey: .Text)
-        self = .text(textData)
+        
+        if let textData = try? container.decode(TextItem.self, forKey: .Text) {
+            self = .text(textData)
+        } else if let inputData = try? container.decode(InputItem.self, forKey: .Input) {
+            self = .input(inputData)
+        } else if let buttonData = try? container.decode(ButtonItem.self, forKey: .Button) {
+            self = .button(buttonData)
+        } else {
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(
+                    codingPath: decoder.codingPath,
+                    debugDescription: "Unknown display item kind"
+                )
+            )
+        }
     }
     
     func encode(to encoder: Encoder) throws {
@@ -41,6 +58,10 @@ enum DisplayItemKind: Codable {
         switch self {
         case .text(let item):
             try container.encode(item, forKey: .Text)
+        case .input(let item):
+            try container.encode(item, forKey: .Input)
+        case .button(let item):
+            try container.encode(item, forKey: .Button)
         }
     }
 }
@@ -57,6 +78,32 @@ struct TextItem: Codable {
         case fontSize = "font_size"
         case isLink = "is_link"
         case linkUrl = "link_url"
+    }
+}
+
+/// Input display item
+struct InputItem: Codable {
+    let name: String
+    let value: String
+    let inputType: String
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case value
+        case inputType = "input_type"
+    }
+}
+
+/// Button display item
+struct ButtonItem: Codable {
+    let label: String
+    let buttonType: String
+    let formId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case label
+        case buttonType = "button_type"
+        case formId = "form_id"
     }
 }
 

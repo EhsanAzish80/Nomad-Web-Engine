@@ -146,6 +146,44 @@ pub unsafe extern "C" fn nomad_engine_set_viewport_width(
     }
 }
 
+/// Submits a form with the given input values.
+///
+/// The inputs_json parameter should be a JSON string containing an array of [name, value] pairs:
+/// Example: `[["q", "search term"], ["lang", "en"]]`
+///
+/// Returns 0 on success, non-zero on failure.
+///
+/// # Safety
+///
+/// The engine pointer must be a valid pointer returned by `nomad_engine_create`.
+/// The inputs_json pointer must be a valid null-terminated C string.
+#[no_mangle]
+pub unsafe extern "C" fn nomad_engine_submit_form(
+    engine: *mut NomadEngine,
+    form_index: usize,
+    inputs_json: *const c_char,
+) -> i32 {
+    if engine.is_null() || inputs_json.is_null() {
+        return -1;
+    }
+
+    let inputs_str = match CStr::from_ptr(inputs_json).to_str() {
+        Ok(s) => s,
+        Err(_) => return -2,
+    };
+
+    // Parse JSON input
+    let inputs: Vec<(String, String)> = match serde_json::from_str(inputs_str) {
+        Ok(v) => v,
+        Err(_) => return -3,
+    };
+
+    match (*engine).engine.submit_form(form_index, &inputs) {
+        Ok(_) => 0,
+        Err(_) => -4,
+    }
+}
+
 /// Frees a byte buffer returned by the engine.
 ///
 /// # Safety

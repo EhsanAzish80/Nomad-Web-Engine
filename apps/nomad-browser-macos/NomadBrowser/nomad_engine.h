@@ -39,6 +39,11 @@ ByteBuffer nomad_engine_get_display_list(const NomadEngine* engine);
 /// Sets the viewport width for layout.
 void nomad_engine_set_viewport_width(NomadEngine* engine, float width);
 
+/// Submits a form with the given input values.
+/// The inputs_json parameter should be a JSON string containing an array of [name, value] pairs.
+/// Returns 0 on success, non-zero on failure.
+int32_t nomad_engine_submit_form(NomadEngine* engine, size_t form_index, const char* inputs_json);
+
 /// Frees a byte buffer returned by the engine.
 void nomad_free_byte_buffer(ByteBuffer buffer);
 

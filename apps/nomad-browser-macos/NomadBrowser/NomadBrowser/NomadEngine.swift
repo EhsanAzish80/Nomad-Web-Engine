@@ -69,6 +69,28 @@ class NomadEngineWrapper: ObservableObject {
         nomad_engine_tick(engine)
     }
     
+    /// Submits a form with the given inputs
+    func submitForm(formIndex: Int, inputs: [(String, String)]) {
+        guard let engine = engine else {
+            error = "Engine not initialized"
+            return
+        }
+        
+        // TODO: Fix Swift bridging for nomad_engine_submit_form
+        // The function exists in the dylib but Swift can't find it through the bridge
+        // For now, manually construct the URL with query parameters
+        print("Form submission - inputs: \(inputs)")
+        
+        // Build query string manually
+        let queryString = inputs.map { name, value in
+            "\(name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? name)=\(value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value)"
+        }.joined(separator: "&")
+        
+        // For now, just print it - full implementation requires fixing Swift FFI
+        print("Would navigate to URL with query: ?\(queryString)")
+        error = "Form submission not yet fully implemented in Swift layer"
+    }
+    
     /// Updates the display list from the engine
     private func updateDisplayList() {
         guard let engine = engine else { return }

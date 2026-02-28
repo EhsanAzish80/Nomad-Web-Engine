@@ -14,6 +14,17 @@ use thiserror::Error;
 // Re-export commonly used types
 pub use nomad_render::{DisplayList as ExportedDisplayList, DisplayItem, DisplayItemKind, Rect};
 
+/// Form metadata extracted from the DOM
+#[derive(Debug, Clone)]
+pub struct FormMetadata {
+    /// Form ID (if present)
+    pub id: Option<String>,
+    /// Form action URL (where to submit)
+    pub action: String,
+    /// Form method (GET or POST, we only support GET)
+    pub method: String,
+}
+
 /// Errors that can occur during engine operations.
 #[derive(Error, Debug)]
 pub enum EngineError {
@@ -73,6 +84,8 @@ pub struct Engine {
     current_dom: Option<DomTree>,
     current_stylesheet: StyleSheet,
     current_display_list: Option<DisplayList>,
+    current_forms: Vec<FormMetadata>,
+    current_url: Option<String>,
 }
 
 impl Engine {
@@ -93,6 +106,8 @@ impl Engine {
             current_dom: None,
             current_stylesheet: StyleSheet::new(),
             current_display_list: None,
+            current_forms: Vec::new(),
+            current_url: None,
         })
     }
 
@@ -133,6 +148,12 @@ impl Engine {
         // Extract CSS from <style> tags
         let css = extract_css_from_dom(dom.document());
         self.current_stylesheet = StyleSheet::parse(&css);
+
+        // Extract form metadata
+        self.current_forms = extract_forms_from_dom(dom.document(), url);
+
+        // Store current URL for relative URL resolution
+        self.current_url = Some(url.to_string());
 
         // Store the DOM
         self.current_dom = Some(dom);
@@ -213,6 +234,52 @@ impl Engine {
         Ok(())
     }
 
+    /// Submits a GET form with the given input values.
+    ///
+    /// This builds a query string from the inputs and navigates to the action URL.
+    ///
+    /// # Arguments
+    ///
+    /// * `form_index` - Index of the form in current_forms (0 for first form)
+    /// * `inputs` - Map of input name to value
+    ///
+    /// # Returns
+    ///
+    /// Returns the extracted text from the resulting page.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Form index is out of bounds
+    /// - Form method is not GET
+    /// - Navigation fails
+    pub fn submit_form(&mut self, form_index: usize, inputs: &[(String, String)]) -> Result<String, EngineError> {
+        // Get the form metadata
+        let form = self.current_forms.get(form_index)
+            .ok_or(EngineError::NoContent)?
+            .clone();
+
+        // Only support GET forms
+        if form.method != "GET" {
+            return Err(EngineError::Serialization(
+                format!("Only GET forms are supported, got method: {}", form.method)
+            ));
+        }
+
+        // Build query string
+        let query_string = build_query_string(inputs);
+
+        // Build final URL
+        let url = if form.action.contains('?') {
+            format!("{}&{}", form.action, query_string)
+        } else {
+            format!("{}?{}", form.action, query_string)
+        };
+
+        // Load the URL
+        self.load_url(&url)
+    }
+
     /// Returns the engine configuration.
     pub fn config(&self) -> &EngineConfig {
         &self.config
@@ -260,6 +327,70 @@ fn extract_css_recursive(handle: &Handle, css: &mut String) {
             }
         }
     }
+}
+
+/// Extract form metadata from the DOM.
+fn extract_forms_from_dom(handle: &Handle, base_url: &str) -> Vec<FormMetadata> {
+    let mut forms = Vec::new();
+    extract_forms_recursive(handle, base_url, &mut forms);
+    forms
+}
+
+/// Recursively extract form metadata from <form> tags.
+fn extract_forms_recursive(handle: &Handle, base_url: &str, forms: &mut Vec<FormMetadata>) {
+    match &handle.data {
+        NodeData::Element { ref name, ref attrs, .. } => {
+            let tag_name = name.local.as_ref();
+            
+            if tag_name == "form" {
+                let attrs = attrs.borrow();
+                
+                // Get form attributes
+                let id = attrs.iter()
+                    .find(|a| a.name.local.as_ref() == "id")
+                    .map(|a| a.value.to_string());
+                
+                let action = attrs.iter()
+                    .find(|a| a.name.local.as_ref() == "action")
+                    .map(|a| a.value.to_string())
+                    .unwrap_or_else(|| base_url.to_string());
+                
+                let method = attrs.iter()
+                    .find(|a| a.name.local.as_ref() == "method")
+                    .map(|a| a.value.to_string().to_uppercase())
+                    .unwrap_or_else(|| "GET".to_string());
+                
+                forms.push(FormMetadata {
+                    id,
+                    action,
+                    method,
+                });
+            }
+            
+            // Continue searching in children
+            for child in handle.children.borrow().iter() {
+                extract_forms_recursive(child, base_url, forms);
+            }
+        }
+        _ => {
+            // For non-element nodes, search children
+            for child in handle.children.borrow().iter() {
+                extract_forms_recursive(child, base_url, forms);
+            }
+        }
+    }
+}
+
+/// Build a URL query string from input name-value pairs.
+fn build_query_string(inputs: &[(String, String)]) -> String {
+    inputs.iter()
+        .map(|(name, value)| {
+            format!("{}={}", 
+                urlencoding::encode(name), 
+                urlencoding::encode(value))
+        })
+        .collect::<Vec<_>>()
+        .join("&")
 }
 
 #[cfg(test)]

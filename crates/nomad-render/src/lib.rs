@@ -75,6 +75,24 @@ pub enum DisplayItemKind {
         /// Background color (future)
         color: Option<String>,
     },
+    /// Text input field
+    Input {
+        /// Input name for form submission
+        name: String,
+        /// Input value/placeholder
+        value: String,
+        /// Input type (text, password, etc.)
+        input_type: String,
+    },
+    /// Button (submit or button)
+    Button {
+        /// Button label
+        label: String,
+        /// Button type (submit, button, reset)
+        button_type: String,
+        /// Form ID this button belongs to
+        form_id: Option<String>,
+    },
 }
 
 /// A rectangle.
@@ -163,6 +181,34 @@ impl RenderEngine {
                         bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
                     });
                 }
+            }
+            LayoutContent::Input {
+                name,
+                value,
+                input_type,
+            } => {
+                display_list.items.push(DisplayItem {
+                    kind: DisplayItemKind::Input {
+                        name: name.clone(),
+                        value: value.clone(),
+                        input_type: input_type.clone(),
+                    },
+                    bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                });
+            }
+            LayoutContent::Button {
+                label,
+                button_type,
+                form_id,
+            } => {
+                display_list.items.push(DisplayItem {
+                    kind: DisplayItemKind::Button {
+                        label: label.clone(),
+                        button_type: button_type.clone(),
+                        form_id: form_id.clone(),
+                    },
+                    bounds: Rect::new(abs_x, abs_y, layout_box.width, layout_box.height),
+                });
             }
             LayoutContent::Element { .. } | LayoutContent::Anonymous => {
                 // For elements, we might add a box later for backgrounds/borders
