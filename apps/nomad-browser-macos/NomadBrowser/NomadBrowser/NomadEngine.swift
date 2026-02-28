@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import Combine
 
 /// Wrapper around the Nomad Web Engine
 class NomadEngineWrapper: ObservableObject {
@@ -82,10 +83,14 @@ class NomadEngineWrapper: ObservableObject {
         let data = Data(bytes: buffer.data!, count: buffer.len)
         nomad_free_byte_buffer(buffer)
         
+        // Debug: print the JSON
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("Display list JSON: \(jsonString)")
+        }
+        
         do {
             // Decode JSON from the engine
             let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
             let list = try decoder.decode(DisplayList.self, from: data)
             
             DispatchQueue.main.async {

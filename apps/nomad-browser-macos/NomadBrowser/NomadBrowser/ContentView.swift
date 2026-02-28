@@ -56,7 +56,7 @@ struct ContentView: View {
                             loadURL()
                         }
                     )
-                    .frame(width: viewportWidth, height: displayList.height)
+                    .frame(width: viewportWidth, height: CGFloat(displayList.height))
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if !engine.isLoading {

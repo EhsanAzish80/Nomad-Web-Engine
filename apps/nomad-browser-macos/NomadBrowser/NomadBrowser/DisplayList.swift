@@ -25,28 +25,14 @@ enum DisplayItemKind: Codable {
     case text(TextItem)
     
     private enum CodingKeys: String, CodingKey {
-        case type
-        case content
-        case fontSize = "font_size"
-        case isLink = "is_link"
-        case linkUrl = "link_url"
+        case Text
     }
     
     init(from decoder: Decoder) throws {
+        // Rust serializes enums as {"VariantName": {fields}}
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        // The Rust enum is serialized as a struct with "Text" variant
-        let content = try container.decode(String.self, forKey: .content)
-        let fontSize = try container.decode(Float.self, forKey: .fontSize)
-        let isLink = try container.decode(Bool.self, forKey: .isLink)
-        let linkUrl = try container.decodeIfPresent(String.self, forKey: .linkUrl)
-        
-        self = .text(TextItem(
-            content: content,
-            fontSize: fontSize,
-            isLink: isLink,
-            linkUrl: linkUrl
-        ))
+        let textData = try container.decode(TextItem.self, forKey: .Text)
+        self = .text(textData)
     }
     
     func encode(to encoder: Encoder) throws {
@@ -54,10 +40,7 @@ enum DisplayItemKind: Codable {
         
         switch self {
         case .text(let item):
-            try container.encode(item.content, forKey: .content)
-            try container.encode(item.fontSize, forKey: .fontSize)
-            try container.encode(item.isLink, forKey: .isLink)
-            try container.encodeIfPresent(item.linkUrl, forKey: .linkUrl)
+            try container.encode(item, forKey: .Text)
         }
     }
 }
@@ -68,6 +51,13 @@ struct TextItem: Codable {
     let fontSize: Float
     let isLink: Bool
     let linkUrl: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case content
+        case fontSize = "font_size"
+        case isLink = "is_link"
+        case linkUrl = "link_url"
+    }
 }
 
 /// A rectangle

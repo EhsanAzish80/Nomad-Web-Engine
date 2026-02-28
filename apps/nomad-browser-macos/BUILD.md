@@ -44,61 +44,43 @@ cp bindings/c-api/nomad_engine.h apps/nomad-browser-macos/NomadBrowser/
 
 ## Xcode Project Setup
 
-Since we're providing source files, you'll need to create an Xcode project:
+The Xcode project is already configured and ready to use.
 
-### Creating the Xcode Project
+### Build Configuration
 
-1. Open Xcode
-2. Create a new project: File → New → Project
-3. Choose "macOS" → "App"
-4. Set:
-   - Product Name: `NomadBrowser`
-   - Team: Your team
-   - Organization Identifier: com.yourname
-   - Interface: SwiftUI
-   - Language: Swift
-5. Save in `apps/nomad-browser-macos/`
+The project includes:
+- **Automatic library embedding**: The Rust library is automatically copied into the app bundle during build
+- **Code signing**: The library is signed with the app's code signing identity
+- **Bridging header**: Pre-configured to use the C API
+- **Library search paths**: Already set to find the Rust library
 
-### Adding Files to the Project
+### Adding Network Entitlements
 
-1. **Add Swift Files:**
-   - Drag all `.swift` files from `NomadBrowser/` into the project
-   - Select "Copy items if needed"
-   - Select "NomadBrowser" target
+To enable the app to load URLs from the internet:
 
-2. **Add Bridging Header:**
-   - In Build Settings, set "Objective-C Bridging Header" to:
-     ```
-     NomadBrowser/NomadBrowser-Bridging-Header.h
-     ```
+1. Open the project in Xcode
+2. Select the **NomadBrowser** target
+3. Go to **Signing & Capabilities**
+4. Under **App Sandbox**, enable:
+   - ✅ **Outgoing Connections (Client)**
 
-3. **Link Rust Library:**
-   - Select the NomadBrowser target
-   - Go to "Build Phases" → "Link Binary with Libraries"
-   - Click "+" and "Add Other..."
-   - Navigate to `lib/libnomad_c_api.dylib`
-   - Add it to the project
-
-4. **Set Library Search Paths:**
-   - In Build Settings, set "Library Search Paths" to:
-     ```
-     $(PROJECT_DIR)/lib
-     ```
-
-5. **Set Header Search Paths:**
-   - In Build Settings, set "Header Search Paths" to:
-     ```
-     $(PROJECT_DIR)/NomadBrowser
-     ```
-
-6. **Enable App Transport Security:**
-   - The Info.plist already includes the necessary settings
+This is required for the app to make HTTP/HTTPS requests.
 
 ### Build and Run
 
-1. Select the "NomadBrowser" scheme
-2. Choose "My Mac" as the destination
-3. Press ⌘R to build and run
+1. Build the Rust library first:
+   ```bash
+   ./build_rust.sh
+   ```
+
+2. Open the project in Xcode:
+   ```bash
+   open NomadBrowser/NomadBrowser.xcodeproj
+   ```
+
+3. Select the "NomadBrowser" scheme
+4. Choose "My Mac" as the destination
+5. Press ⌘R to build and run
 
 ## Project Structure
 
@@ -131,34 +113,44 @@ nomad-browser-macos/
 
 ## Troubleshooting
 
-### "libnomad_c_api.dylib not found"
+### "Library not loaded: @rpath/libnomad_c_api.dylib"
 
-**Solution:** Run the build script again:
+**Solution:** Run the build script to compile the Rust library:
 ```bash
 ./build_rust.sh
 ```
 
-### "Undefined symbols for architecture arm64/x86_64"
+Then rebuild in Xcode (⌘B). The library will be automatically embedded in the app bundle.
 
-**Solution:** Make sure you're building for the correct architecture:
+### "Sandbox: deny file-write-create"
+
+**Solution:** This is normal during development. The build system handles it automatically. If you see persistent issues, clean the build folder (⌘⇧K) and rebuild.
+
+### App crashes on launch with "signal SIGABRT"
+
+**Solution:** Check that:
+- The Rust library was built successfully (`./build_rust.sh`)
+- The library exists in `lib/libnomad_c_api.dylib`
+- You've enabled network entitlements in Xcode (see above)
+
+Run in Xcode with debugger to see detailed error messages.
+
+### Cannot load URLs - "Network request failed"
+
+**Solution:** Add network entitlements:
+1. In Xcode, select the NomadBrowser target
+2. Go to **Signing & Capabilities**
+3. Under **App Sandbox**, enable:
+   - ✅ **Outgoing Connections (Client)**
+
+### "Code signature invalid"
+
+**Solution:** Delete the app from DerivedData and rebuild:
 ```bash
-# For Apple Silicon
-cargo build --release --target aarch64-apple-darwin -p nomad-c-api
-
-# For Intel
-cargo build --release --target x86_64-apple-darwin -p nomad-c-api
+rm -rf ~/Library/Developer/Xcode/DerivedData/NomadBrowser-*
 ```
 
-### App crashes on launch
-
-**Solution:** Check Console.app for error messages. Common issues:
-- Library not found in the expected path
-- Runtime library search path not set correctly
-- Add `@rpath/libnomad_c_api.dylib` to "Runpath Search Paths"
-
-### Cannot load HTTPS pages
-
-**Solution:** The Info.plist should already allow arbitrary loads for development. For production, configure proper App Transport Security settings.
+Then rebuild in Xcode. The build system will automatically sign the library with the app's identity.
 
 ### Layout looks wrong
 
